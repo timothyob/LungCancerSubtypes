@@ -1,0 +1,445 @@
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+## This is the code used to identify the unique genomic regions represented by the overlapping genes from the germline-regulated gene results for LUSC unique
+## for the manuscript titled Weak sharing of genetic association signals in three lung cancer subtypes: evidence at the SNP, gene, regulation and pathway levels.
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 1. Load compiled list of all germline-regulated genes, get genomic location, and extract all genes per functional category
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+## start new R session for working with LUSC
+
+## load libraries
+
+library("biomaRt")
+
+## load the compiled list of germline-regulated genes per subtype
+
+luad.final.germline.genes <- read.csv("luad_final_germline_genes.csv", header = TRUE)
+
+lusc.final.germline.genes <- read.csv("lusc_final_germline_genes.csv", header = TRUE)
+
+sclc.final.germline.genes <- read.csv("sclc_final_germline_genes.csv", header = TRUE)
+
+# below pull out columns going to use, so gene, Regulatory category, and the dataset where gene was located. Remove one NA from LUAD
+
+luad.final.germline.genes.to.use.with.na <- luad.final.germline.genes[ ,c(1,3,4)] # pull out columns to use
+
+luad.final.germline.genes.to.use <- luad.final.germline.genes.to.use.with.na[-which(is.na(luad.final.germline.genes.to.use.with.na$Gene)), ] # remove one NA in the file
+
+lusc.final.germline.genes.to.use <- lusc.final.germline.genes[ ,c(1,3,4)] # pull out columns to use
+
+sclc.final.germline.genes.to.use <- sclc.final.germline.genes[ ,c(1,3,4)] # pull out columns to use
+
+### Use R library biomaRt to extract genomic positions for all germline-regulated genes
+
+ensembl = useMart(biomart="ENSEMBL_MART_ENSEMBL", host="grch37.ensembl.org", path="/biomart/martservice" ,dataset="hsapiens_gene_ensembl") # mark parameters to use
+
+luad.gene.positions.biomart <- getBM(attributes = c('external_gene_name', 'chromosome_name', 'start_position', 'end_position', 'band'), filters = 'external_gene_name', values = luad.final.germline.genes.to.use$Gene, mart = ensembl) # extract genomic location for each gene
+
+luad.genes.with.position <- merge(luad.final.germline.genes.to.use, luad.gene.positions.biomart, by.x = "Gene", by.y = "external_gene_name", all.x = TRUE) # merge genomic positions to the gene list
+
+### now run the same commands for LUSC and SCLC
+
+## lusc
+
+lusc.gene.positions.biomart <- getBM(attributes = c('external_gene_name', 'chromosome_name', 'start_position', 'end_position', 'band'), filters = 'external_gene_name', values = lusc.final.germline.genes.to.use$Gene, mart = ensembl) # extract genomic location for each gene
+
+lusc.genes.with.position <- merge(lusc.final.germline.genes.to.use, lusc.gene.positions.biomart, by.x = "Gene", by.y = "external_gene_name", all.x = TRUE)
+
+## sclc
+
+sclc.gene.positions.biomart <- getBM(attributes = c('external_gene_name', 'chromosome_name', 'start_position', 'end_position', 'band'), filters = 'external_gene_name', values = sclc.final.germline.genes.to.use$Gene, mart = ensembl) # extract genomic location for each gene
+
+sclc.genes.with.position <- merge(sclc.final.germline.genes.to.use, sclc.gene.positions.biomart, by.x = "Gene", by.y = "external_gene_name", all.x = TRUE)
+
+## now extract the different regulatory categories per subtype 
+
+#################### LUAD ############################# 
+
+luad.gtex.single <- luad.genes.with.position[which(luad.genes.with.position$Data.source == "GTEx single tissue V6 Lung eQTL"), ]
+
+luad.gtex.multi <- luad.genes.with.position[which(luad.genes.with.position$Data.source == "GTEx multi-tissue eQTL in lung > 0.80"), ]
+
+luad.hao <- luad.genes.with.position[which(luad.genes.with.position$Data.source == "Hao single tissue lung eQTL"), ]
+
+luad.fantom <- luad.genes.with.position[which(luad.genes.with.position$Data.source == "FANTOM5 enhancer target gene"), ]
+
+luad.impet.imr90 <- luad.genes.with.position[which(luad.genes.with.position$Data.source == "IM-PET IMR90"), ]
+
+luad.impet.nhlf <- luad.genes.with.position[which(luad.genes.with.position$Data.source == "IM-PET NHLF"), ]
+
+### now combine gtex and im-pet genes
+
+luad.gtex.combined <- rbind(luad.gtex.single, luad.gtex.multi)
+
+luad.impet.combined <- rbind(luad.impet.imr90, luad.impet.nhlf)
+
+#################### LUSC ############################# 
+
+lusc.gtex.single <- lusc.genes.with.position[which(lusc.genes.with.position$Data.source == "GTEx single tissue V6 Lung eQTL"), ]
+
+lusc.gtex.multi <- lusc.genes.with.position[which(lusc.genes.with.position$Data.source == "GTEx multi-tissue eQTL in lung > 0.80"), ]
+
+lusc.hao <- lusc.genes.with.position[which(lusc.genes.with.position$Data.source == "Hao single tissue lung eQTL"), ]
+
+lusc.fantom <- lusc.genes.with.position[which(lusc.genes.with.position$Data.source == "FANTOM5 enhancer target gene"), ]
+
+lusc.impet.imr90 <- lusc.genes.with.position[which(lusc.genes.with.position$Data.source == "IM-PET IMR90"), ]
+
+lusc.impet.nhlf <- lusc.genes.with.position[which(lusc.genes.with.position$Data.source == "IM-PET NHLF"), ]
+
+### now combine gtex and im-pet genes
+
+lusc.gtex.combined <- rbind(lusc.gtex.single, lusc.gtex.multi)
+
+lusc.impet.combined <- rbind(lusc.impet.imr90, lusc.impet.nhlf)
+
+#################### SCLC ############################# 
+
+sclc.gtex.single <- sclc.genes.with.position[which(sclc.genes.with.position$Data.source == "GTEx single tissue V6 Lung eQTL"), ]
+
+sclc.gtex.multi <- sclc.genes.with.position[which(sclc.genes.with.position$Data.source == "GTEx multi-tissue eQTL in lung > 0.80"), ]
+
+sclc.hao <- sclc.genes.with.position[which(sclc.genes.with.position$Data.source == "Hao single tissue lung eQTL"), ]
+
+sclc.fantom <- sclc.genes.with.position[which(sclc.genes.with.position$Data.source == "FANTOM5 enhancer target gene"), ]
+
+sclc.impet.imr90 <- sclc.genes.with.position[which(sclc.genes.with.position$Data.source == "IM-PET IMR90"), ]
+
+sclc.impet.nhlf <- sclc.genes.with.position[which(sclc.genes.with.position$Data.source == "IM-PET NHLF"), ]
+
+### now combine gtex and im-pet genes
+
+sclc.gtex.combined <- rbind(sclc.gtex.single, sclc.gtex.multi)
+
+sclc.impet.combined <- rbind(sclc.impet.imr90, sclc.impet.nhlf)
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 2. In same R session, extract genes unique to LUSC in every category and make bed files for bedtools
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### now identify genes just for LUSC unique
+
+lusc.unique.gtex.single <- setdiff(setdiff(lusc.gtex.single$Gene, luad.gtex.single$Gene), sclc.gtex.single$Gene)
+
+lusc.unique.gtex.multi <- setdiff(setdiff(lusc.gtex.multi$Gene, luad.gtex.multi$Gene), sclc.gtex.multi$Gene)
+
+lusc.unique.hao <- setdiff(setdiff(lusc.hao$Gene, luad.hao$Gene), sclc.hao$Gene)
+
+lusc.unique.fantom <- setdiff(setdiff(lusc.fantom$Gene, luad.fantom$Gene), sclc.fantom$Gene)
+
+lusc.unique.impet.imr90 <- setdiff(setdiff(lusc.impet.imr90$Gene, luad.impet.imr90$Gene), sclc.impet.imr90$Gene)
+
+lusc.unique.impet.nhlf <- setdiff(setdiff(lusc.impet.nhlf$Gene, luad.impet.nhlf$Gene), sclc.impet.nhlf$Gene)
+
+lusc.unique.all <- setdiff(setdiff(lusc.genes.with.position$Gene, luad.genes.with.position$Gene), sclc.genes.with.position$Gene)
+
+### now combine gtex and im-pet genes
+
+lusc.unique.gtex.combined <- setdiff(setdiff(lusc.gtex.combined$Gene, luad.gtex.combined$Gene), sclc.gtex.combined$Gene)
+
+lusc.unique.impet.combined <- setdiff(setdiff(lusc.impet.combined$Gene, luad.impet.combined$Gene), sclc.impet.combined$Gene)
+
+### now merge these unique genes with the location information from biomaRt
+
+lusc.unique.gtex.single.FINAL <- merge(lusc.gtex.single, as.data.frame(lusc.unique.gtex.single), by.x = "Gene", by.y = "lusc.unique.gtex.single", all.x = FALSE)
+
+lusc.unique.gtex.multi.FINAL <- merge(lusc.gtex.multi, as.data.frame(lusc.unique.gtex.multi), by.x = "Gene", by.y = "lusc.unique.gtex.multi", all.x = FALSE)
+
+lusc.unique.gtex.combined.FINAL <- merge(lusc.gtex.combined, as.data.frame(lusc.unique.gtex.combined), by.x = "Gene", by.y = "lusc.unique.gtex.combined", all.x = FALSE)
+
+lusc.unique.hao.FINAL <- merge(lusc.hao, as.data.frame(lusc.unique.hao), by.x = "Gene", by.y = "lusc.unique.hao", all.x = FALSE)
+
+lusc.unique.fantom.FINAL <- merge(lusc.fantom, as.data.frame(lusc.unique.fantom), by.x = "Gene", by.y = "lusc.unique.fantom", all.x = FALSE)
+
+lusc.unique.impet.imr90.FINAL <- merge(lusc.impet.imr90, as.data.frame(lusc.unique.impet.imr90), by.x = "Gene", by.y = "lusc.unique.impet.imr90", all.x = FALSE)
+
+lusc.unique.impet.nhlf.FINAL <- merge(lusc.impet.nhlf, as.data.frame(lusc.unique.impet.nhlf), by.x = "Gene", by.y = "lusc.unique.impet.nhlf", all.x = FALSE)
+
+lusc.unique.impet.combined.FINAL <- merge(lusc.impet.combined, as.data.frame(lusc.unique.impet.combined), by.x = "Gene", by.y = "lusc.unique.impet.combined", all.x = FALSE)
+
+lusc.unique.all.FINAL <- merge(lusc.genes.with.position, as.data.frame(lusc.unique.all), by.x = "Gene", by.y = "lusc.unique.all", all.x = FALSE)
+
+### now generate the bed files for each category and write to new files for bedtools
+
+#################### GTEx single tissue eQTLs ############################# 
+
+bed.gtex.single <- lusc.unique.gtex.single.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.gtex.single) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.gtex.single <- paste("chr", bed.gtex.single$chrom, sep = "")
+
+bed.gtex.single$chrom.2 <- chr.for.paste.gtex.single
+
+## make final bed file
+
+bed.gtex.single.final <- bed.gtex.single[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.gtex.single.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.gtex.single.final, file = "lusc_unique_gtex_single_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### GTEx multi tissue eQTLs ############################# 
+
+bed.gtex.multi <- lusc.unique.gtex.multi.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.gtex.multi) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.gtex.multi <- paste("chr", bed.gtex.multi$chrom, sep = "")
+
+bed.gtex.multi$chrom.2 <- chr.for.paste.gtex.multi
+
+## make final bed file
+
+bed.gtex.multi.final <- bed.gtex.multi[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.gtex.multi.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.gtex.multi.final, file = "lusc_unique_gtex_multi_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### GTEx combined eQTLs ############################# 
+
+bed.gtex.combined <- lusc.unique.gtex.combined.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.gtex.combined) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.gtex.combined <- paste("chr", bed.gtex.combined$chrom, sep = "")
+
+bed.gtex.combined$chrom.2 <- chr.for.paste.gtex.combined
+
+## make final bed file
+
+bed.gtex.combined.final <- bed.gtex.combined[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.gtex.combined.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.gtex.combined.final, file = "lusc_unique_gtex_combined_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### Hao single tissue eQTLs ############################# 
+
+bed.hao <- lusc.unique.hao.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.hao) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.hao <- paste("chr", bed.hao$chrom, sep = "")
+
+bed.hao$chrom.2 <- chr.for.paste.hao
+
+## make final bed file
+
+bed.hao.final <- bed.hao[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.hao.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.hao.final, file = "lusc_unique_hao_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### FANTOM5 enhancer targets ############################# 
+
+bed.fantom <- lusc.unique.fantom.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.fantom) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.fantom <- paste("chr", bed.fantom$chrom, sep = "")
+
+bed.fantom$chrom.2 <- chr.for.paste.fantom
+
+## make final bed file
+
+bed.fantom.final <- bed.fantom[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.fantom.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.fantom.final, file = "lusc_unique_fantom_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### IM-PET IMR90 enhancer targets ############################# 
+
+bed.impet.imr90 <- lusc.unique.impet.imr90.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.impet.imr90) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.impet.imr90 <- paste("chr", bed.impet.imr90$chrom, sep = "")
+
+bed.impet.imr90$chrom.2 <- chr.for.paste.impet.imr90
+
+## make final bed file
+
+bed.impet.imr90.final <- bed.impet.imr90[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.impet.imr90.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.impet.imr90.final, file = "lusc_unique_impet_imr90_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### IM-PET NHLF enhancer targets ############################# 
+
+bed.impet.nhlf <- lusc.unique.impet.nhlf.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.impet.nhlf) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.impet.nhlf <- paste("chr", bed.impet.nhlf$chrom, sep = "")
+
+bed.impet.nhlf$chrom.2 <- chr.for.paste.impet.nhlf
+
+## make final bed file
+
+bed.impet.nhlf.final <- bed.impet.nhlf[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.impet.nhlf.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.impet.nhlf.final, file = "lusc_unique_impet_nhlf_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### IM-PET combined enhancer targets ############################# 
+
+bed.impet.combined <- lusc.unique.impet.combined.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.impet.combined) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.impet.combined <- paste("chr", bed.impet.combined$chrom, sep = "")
+
+bed.impet.combined$chrom.2 <- chr.for.paste.impet.combined
+
+## make final bed file
+
+bed.impet.combined.final <- bed.impet.combined[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.impet.combined.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.impet.combined.final, file = "lusc_unique_impet_combined_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+#################### all genes ############################# 
+
+bed.all.overlap <- lusc.unique.all.FINAL[ ,c(4,5,6,1,7)] ## extract columns for bedtools
+
+colnames(bed.all.overlap) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## change column names
+
+## add 'chr' to each chromosome number
+
+chr.for.paste.all.overlap <- paste("chr", bed.all.overlap$chrom, sep = "")
+
+bed.all.overlap$chrom.2 <- chr.for.paste.all.overlap
+
+## make final bed file
+
+bed.all.overlap.final <- bed.all.overlap[, c(6, 2, 3, 4, 5)] ## change format of columns
+
+colnames(bed.all.overlap.final) <- c("chrom", "chromStart", "chromEnd", "Gene", "Band") ## rename new columns
+
+## write new bed file
+
+write.table(bed.all.overlap.final, file = "lusc_unique_all_overlap_for_bedtools.bed", sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 3. Upload bed files to linux command line and convert to unix, sort, and then run bedtools to identify clusters of genes
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+####################################################################################################################################################################################
+####################    Before running bedtools need to manually add genomic location for any genes that were not found with biomaRt.  ########################################
+####################    Use the NCBI gene website https://www.ncbi.nlm.nih.gov/gene for this information                               ########################################
+####################    Add to existing file and rename as _positions_added.                                                           ########################################   
+####################################################################################################################################################################################
+
+#### convert all bed files from dos to unix
+
+dos2unix lusc_unique_gtex_single_for_bedtools.bed
+
+dos2unix lusc_unique_gtex_multi_for_bedtools.bed
+
+dos2unix lusc_unique_gtex_combined_for_bedtools.bed
+
+dos2unix lusc_unique_hao_for_bedtools_positions_added.bed
+
+dos2unix lusc_unique_fantom_for_bedtools_positions_added.bed
+
+dos2unix lusc_unique_impet_imr90_for_bedtools.bed
+
+dos2unix lusc_unique_impet_nhlf_for_bedtools.bed
+
+dos2unix lusc_unique_impet_combined_for_bedtools.bed
+
+dos2unix lusc_unique_all_overlap_for_bedtools_positions_added.bed
+
+#### sort all of the bed files
+
+sort -k1,1 -k2,2n lusc_unique_gtex_single_for_bedtools.bed > lusc_unique_gtex_single_for_bedtools.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_gtex_multi_for_bedtools.bed > lusc_unique_gtex_multi_for_bedtools.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_gtex_combined_for_bedtools.bed > lusc_unique_gtex_combined_for_bedtools.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_hao_for_bedtools_positions_added.bed > lusc_unique_hao_for_bedtools_positions_added.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_fantom_for_bedtools_positions_added.bed > lusc_unique_fantom_for_bedtools_positions_added.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_impet_imr90_for_bedtools.bed > lusc_unique_impet_imr90_for_bedtools.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_impet_nhlf_for_bedtools.bed > lusc_unique_impet_nhlf_for_bedtools.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_impet_combined_for_bedtools.bed > lusc_unique_impet_combined_for_bedtools.sorted.bed
+
+sort -k1,1 -k2,2n lusc_unique_all_overlap_for_bedtools_positions_added.bed > lusc_unique_all_overlap_for_bedtools_positions_added.sorted.bed
+
+#### run the cluster function in bedtools 
+
+bedtools cluster -i lusc_unique_gtex_single_for_bedtools.sorted.bed -d 1000000 > lusc_unique_gtex_single_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_gtex_multi_for_bedtools.sorted.bed -d 1000000 > lusc_unique_gtex_multi_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_gtex_combined_for_bedtools.sorted.bed -d 1000000 > lusc_unique_gtex_combined_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_hao_for_bedtools_positions_added.sorted.bed -d 1000000 > lusc_unique_hao_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_fantom_for_bedtools_positions_added.sorted.bed -d 1000000 > lusc_unique_fantom_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_impet_imr90_for_bedtools.sorted.bed -d 1000000 > lusc_unique_impet_imr90_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_impet_nhlf_for_bedtools.sorted.bed -d 1000000 > lusc_unique_impet_nhlf_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_impet_combined_for_bedtools.sorted.bed -d 1000000 > lusc_unique_impet_combined_regions_by_loci.bed
+
+bedtools cluster -i lusc_unique_all_overlap_for_bedtools_positions_added.sorted.bed -d 1000000 > lusc_unique_all_overlap_regions_by_loci.bed
+

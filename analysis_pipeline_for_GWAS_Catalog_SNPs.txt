@@ -1,0 +1,613 @@
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+## This is the code used to run the pipeline for the lung cancer SNPs from the GWAS Catalog https://www.genome.gov/26525384/catalog-of-published-genomewide-association-studies/ 
+## (new location at https://www.ebi.ac.uk/gwas/)
+## for the manuscript titled Weak sharing of genetic association signals in three lung cancer subtypes: evidence at the SNP, gene, regulation and pathway levels.
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### First, load summary level results for GWAS Catalog SNPs from https://www.ncbi.nlm.nih.gov/genome/tools/remap and remap using the default settings
+
+### Section 1. Match results obtained from Remap of hg18 to hg19 from NCBI located at https://www.ncbi.nlm.nih.gov/genome/tools/remap to updated dbSNP ID's
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### load R session 
+
+## load libraries
+
+library(reshape2)
+
+### load results obtained from Remap
+
+remap.results.all <- read.csv("GWAS_Catalog_from_remap.csv")
+
+## remove snp positions aligned at a second pass not as reliable as first pass
+
+remap.results <- remap.results.all[which(remap.results.all$recip != "Second Pass"), ]
+
+############## load all of the chromosomes from dbSNP for hg19 located at ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606_b150_GRCh37p13/chr_rpts/ ###############
+
+chr.1.snps <- read.delim("chr_1.txt", sep="\t", skip = 6, header = F)
+
+chr.2.snps <- read.delim("chr_2.txt", sep="\t", skip = 6, header = F)
+
+chr.3.snps <- read.delim("chr_3.txt", sep="\t", skip = 6, header = F)
+
+chr.4.snps <- read.delim("chr_4.txt", sep="\t", skip = 6, header = F)
+
+chr.5.snps <- read.delim("chr_5.txt", sep="\t", skip = 6, header = F)
+
+chr.6.snps <- read.delim("chr_6.txt", sep="\t", skip = 6, header = F)
+
+chr.7.snps <- read.delim("chr_7.txt", sep="\t", skip = 6, header = F)
+
+chr.8.snps <- read.delim("chr_8.txt", sep="\t", skip = 6, header = F)
+
+chr.9.snps <- read.delim("chr_9.txt", sep="\t", skip = 6, header = F)
+
+chr.10.snps <- read.delim("chr_10.txt", sep="\t", skip = 6, header = F)
+
+chr.11.snps <- read.delim("chr_11.txt", sep="\t", skip = 6, header = F)
+
+chr.12.snps <- read.delim("chr_12.txt", sep="\t", skip = 6, header = F)
+
+chr.13.snps <- read.delim("chr_13.txt", sep="\t", skip = 6, header = F)
+
+chr.14.snps <- read.delim("chr_14.txt", sep="\t", skip = 6, header = F)
+
+chr.15.snps <- read.delim("chr_15.txt", sep="\t", skip = 6, header = F)
+
+chr.16.snps <- read.delim("chr_16.txt", sep="\t", skip = 6, header = F)
+
+chr.17.snps <- read.delim("chr_17.txt", sep="\t", skip = 6, header = F)
+
+chr.18.snps <- read.delim("chr_18.txt", sep="\t", skip = 6, header = F)
+
+chr.19.snps <- read.delim("chr_19.txt", sep="\t", skip = 6, header = F)
+
+chr.20.snps <- read.delim("chr_20.txt", sep="\t", skip = 6, header = F)
+
+chr.21.snps <- read.delim("chr_21.txt", sep="\t", skip = 6, header = F)
+
+chr.22.snps <- read.delim("chr_22.txt", sep="\t", skip = 6, header = F)
+
+## match up SNPs and rsIDs 
+
+idx.chr.1 <- which(remap.results$mapped_id ==1)
+remap.chr.1 <- remap.results[idx.chr.1, ]
+idx.match.chr.1 <- match(remap.chr.1$mapped_start, chr.1.snps$V12)
+chr.1.snps.from.rematch <- chr.1.snps[idx.match.chr.1, ]
+chr.1.snps.rs.id <- chr.1.snps.from.rematch[, c(1,12)]
+chr.1.rs.snp.id <- paste('rs',chr.1.snps.rs.id$V1, sep='')
+chr.1.snp.location <- paste('1',chr.1.snps.rs.id$V12, sep=':')
+final.table.remap.chr.1.snps <- data.frame(chr.1.rs.snp.id, chr.1.snp.location)
+idx.chr.2 <- which(remap.results$mapped_id ==2)
+remap.chr.2 <- remap.results[idx.chr.2, ]
+idx.match.chr.2 <- match(remap.chr.2$mapped_start, chr.2.snps$V12)
+chr.2.snps.from.rematch <- chr.2.snps[idx.match.chr.2, ]
+chr.2.snps.rs.id <- chr.2.snps.from.rematch[, c(1,12)]
+chr.2.rs.snp.id <- paste('rs',chr.2.snps.rs.id$V1, sep='')
+chr.2.snp.location <- paste('2',chr.2.snps.rs.id$V12, sep=':')
+final.table.remap.chr.2.snps <- data.frame(chr.2.rs.snp.id, chr.2.snp.location)
+idx.chr.3 <- which(remap.results$mapped_id ==3)
+remap.chr.3 <- remap.results[idx.chr.3, ]
+idx.match.chr.3 <- match(remap.chr.3$mapped_start, chr.3.snps$V12)
+chr.3.snps.from.rematch <- chr.3.snps[idx.match.chr.3, ]
+chr.3.snps.rs.id <- chr.3.snps.from.rematch[, c(1,12)]
+chr.3.rs.snp.id <- paste('rs',chr.3.snps.rs.id$V1, sep='')
+chr.3.snp.location <- paste('3',chr.3.snps.rs.id$V12, sep=':')
+final.table.remap.chr.3.snps <- data.frame(chr.3.rs.snp.id, chr.3.snp.location)
+idx.chr.4 <- which(remap.results$mapped_id ==4)
+remap.chr.4 <- remap.results[idx.chr.4, ]
+idx.match.chr.4 <- match(remap.chr.4$mapped_start, chr.4.snps$V12)
+chr.4.snps.from.rematch <- chr.4.snps[idx.match.chr.4, ]
+chr.4.snps.rs.id <- chr.4.snps.from.rematch[, c(1,12)]
+chr.4.rs.snp.id <- paste('rs',chr.4.snps.rs.id$V1, sep='')
+chr.4.snp.location <- paste('4',chr.4.snps.rs.id$V12, sep=':')
+final.table.remap.chr.4.snps <- data.frame(chr.4.rs.snp.id, chr.4.snp.location)
+idx.chr.5 <- which(remap.results$mapped_id ==5)
+remap.chr.5 <- remap.results[idx.chr.5, ]
+idx.match.chr.5 <- match(remap.chr.5$mapped_start, chr.5.snps$V12)
+chr.5.snps.from.rematch <- chr.5.snps[idx.match.chr.5, ]
+chr.5.snps.rs.id <- chr.5.snps.from.rematch[, c(1,12)]
+chr.5.rs.snp.id <- paste('rs',chr.5.snps.rs.id$V1, sep='')
+chr.5.snp.location <- paste('5',chr.5.snps.rs.id$V12, sep=':')
+final.table.remap.chr.5.snps <- data.frame(chr.5.rs.snp.id, chr.5.snp.location)
+idx.chr.6 <- which(remap.results$mapped_id ==6)
+remap.chr.6 <- remap.results[idx.chr.6, ]
+idx.match.chr.6 <- match(remap.chr.6$mapped_start, chr.6.snps$V12)
+chr.6.snps.from.rematch <- chr.6.snps[idx.match.chr.6, ]
+chr.6.snps.rs.id <- chr.6.snps.from.rematch[, c(1,12)]
+chr.6.rs.snp.id <- paste('rs',chr.6.snps.rs.id$V1, sep='')
+chr.6.snp.location <- paste('6',chr.6.snps.rs.id$V12, sep=':')
+final.table.remap.chr.6.snps <- data.frame(chr.6.rs.snp.id, chr.6.snp.location)
+idx.chr.7 <- which(remap.results$mapped_id ==7)
+remap.chr.7 <- remap.results[idx.chr.7, ]
+idx.match.chr.7 <- match(remap.chr.7$mapped_start, chr.7.snps$V12)
+chr.7.snps.from.rematch <- chr.7.snps[idx.match.chr.7, ]
+chr.7.snps.rs.id <- chr.7.snps.from.rematch[, c(1,12)]
+chr.7.rs.snp.id <- paste('rs',chr.7.snps.rs.id$V1, sep='')
+chr.7.snp.location <- paste('7',chr.7.snps.rs.id$V12, sep=':')
+final.table.remap.chr.7.snps <- data.frame(chr.7.rs.snp.id, chr.7.snp.location)
+idx.chr.8 <- which(remap.results$mapped_id ==8)
+remap.chr.8 <- remap.results[idx.chr.8, ]
+idx.match.chr.8 <- match(remap.chr.8$mapped_start, chr.8.snps$V12)
+chr.8.snps.from.rematch <- chr.8.snps[idx.match.chr.8, ]
+chr.8.snps.rs.id <- chr.8.snps.from.rematch[, c(1,12)]
+chr.8.rs.snp.id <- paste('rs',chr.8.snps.rs.id$V1, sep='')
+chr.8.snp.location <- paste('8',chr.8.snps.rs.id$V12, sep=':')
+final.table.remap.chr.8.snps <- data.frame(chr.8.rs.snp.id, chr.8.snp.location)
+idx.chr.9 <- which(remap.results$mapped_id ==9)
+remap.chr.9 <- remap.results[idx.chr.9, ]
+idx.match.chr.9 <- match(remap.chr.9$mapped_start, chr.9.snps$V12)
+chr.9.snps.from.rematch <- chr.9.snps[idx.match.chr.9, ]
+chr.9.snps.rs.id <- chr.9.snps.from.rematch[, c(1,12)]
+chr.9.rs.snp.id <- paste('rs',chr.9.snps.rs.id$V1, sep='')
+chr.9.snp.location <- paste('9',chr.9.snps.rs.id$V12, sep=':')
+final.table.remap.chr.9.snps <- data.frame(chr.9.rs.snp.id, chr.9.snp.location)
+idx.chr.10 <- which(remap.results$mapped_id ==10)
+remap.chr.10 <- remap.results[idx.chr.10, ]
+idx.match.chr.10 <- match(remap.chr.10$mapped_start, chr.10.snps$V12)
+chr.10.snps.from.rematch <- chr.10.snps[idx.match.chr.10, ]
+chr.10.snps.rs.id <- chr.10.snps.from.rematch[, c(1,12)]
+chr.10.rs.snp.id <- paste('rs',chr.10.snps.rs.id$V1, sep='')
+chr.10.snp.location <- paste('10',chr.10.snps.rs.id$V12, sep=':')
+final.table.remap.chr.10.snps <- data.frame(chr.10.rs.snp.id, chr.10.snp.location)
+idx.chr.11 <- which(remap.results$mapped_id ==11)
+remap.chr.11 <- remap.results[idx.chr.11, ]
+idx.match.chr.11 <- match(remap.chr.11$mapped_start, chr.11.snps$V12)
+chr.11.snps.from.rematch <- chr.11.snps[idx.match.chr.11, ]
+chr.11.snps.rs.id <- chr.11.snps.from.rematch[, c(1,12)]
+chr.11.rs.snp.id <- paste('rs',chr.11.snps.rs.id$V1, sep='')
+chr.11.snp.location <- paste('11',chr.11.snps.rs.id$V12, sep=':')
+final.table.remap.chr.11.snps <- data.frame(chr.11.rs.snp.id, chr.11.snp.location)
+idx.chr.12 <- which(remap.results$mapped_id ==12)
+remap.chr.12 <- remap.results[idx.chr.12, ]
+idx.match.chr.12 <- match(remap.chr.12$mapped_start, chr.12.snps$V12)
+chr.12.snps.from.rematch <- chr.12.snps[idx.match.chr.12, ]
+chr.12.snps.rs.id <- chr.12.snps.from.rematch[, c(1,12)]
+chr.12.rs.snp.id <- paste('rs',chr.12.snps.rs.id$V1, sep='')
+chr.12.snp.location <- paste('12',chr.12.snps.rs.id$V12, sep=':')
+final.table.remap.chr.12.snps <- data.frame(chr.12.rs.snp.id, chr.12.snp.location)
+idx.chr.13 <- which(remap.results$mapped_id ==13)
+remap.chr.13 <- remap.results[idx.chr.13, ]
+idx.match.chr.13 <- match(remap.chr.13$mapped_start, chr.13.snps$V12)
+chr.13.snps.from.rematch <- chr.13.snps[idx.match.chr.13, ]
+chr.13.snps.rs.id <- chr.13.snps.from.rematch[, c(1,12)]
+chr.13.rs.snp.id <- paste('rs',chr.13.snps.rs.id$V1, sep='')
+chr.13.snp.location <- paste('13',chr.13.snps.rs.id$V12, sep=':')
+final.table.remap.chr.13.snps <- data.frame(chr.13.rs.snp.id, chr.13.snp.location)
+idx.chr.14 <- which(remap.results$mapped_id ==14)
+remap.chr.14 <- remap.results[idx.chr.14, ]
+idx.match.chr.14 <- match(remap.chr.14$mapped_start, chr.14.snps$V12)
+chr.14.snps.from.rematch <- chr.14.snps[idx.match.chr.14, ]
+chr.14.snps.rs.id <- chr.14.snps.from.rematch[, c(1,12)]
+chr.14.rs.snp.id <- paste('rs',chr.14.snps.rs.id$V1, sep='')
+chr.14.snp.location <- paste('14',chr.14.snps.rs.id$V12, sep=':')
+final.table.remap.chr.14.snps <- data.frame(chr.14.rs.snp.id, chr.14.snp.location)
+idx.chr.15 <- which(remap.results$mapped_id ==15)
+remap.chr.15 <- remap.results[idx.chr.15, ]
+idx.match.chr.15 <- match(remap.chr.15$mapped_start, chr.15.snps$V12)
+chr.15.snps.from.rematch <- chr.15.snps[idx.match.chr.15, ]
+chr.15.snps.rs.id <- chr.15.snps.from.rematch[, c(1,12)]
+chr.15.rs.snp.id <- paste('rs',chr.15.snps.rs.id$V1, sep='')
+chr.15.snp.location <- paste('15',chr.15.snps.rs.id$V12, sep=':')
+final.table.remap.chr.15.snps <- data.frame(chr.15.rs.snp.id, chr.15.snp.location)
+idx.chr.16 <- which(remap.results$mapped_id ==16)
+remap.chr.16 <- remap.results[idx.chr.16, ]
+idx.match.chr.16 <- match(remap.chr.16$mapped_start, chr.16.snps$V12)
+chr.16.snps.from.rematch <- chr.16.snps[idx.match.chr.16, ]
+chr.16.snps.rs.id <- chr.16.snps.from.rematch[, c(1,12)]
+chr.16.rs.snp.id <- paste('rs',chr.16.snps.rs.id$V1, sep='')
+chr.16.snp.location <- paste('16',chr.16.snps.rs.id$V12, sep=':')
+final.table.remap.chr.16.snps <- data.frame(chr.16.rs.snp.id, chr.16.snp.location)
+idx.chr.17 <- which(remap.results$mapped_id ==17)
+remap.chr.17 <- remap.results[idx.chr.17, ]
+idx.match.chr.17 <- match(remap.chr.17$mapped_start, chr.17.snps$V12)
+chr.17.snps.from.rematch <- chr.17.snps[idx.match.chr.17, ]
+chr.17.snps.rs.id <- chr.17.snps.from.rematch[, c(1,12)]
+chr.17.rs.snp.id <- paste('rs',chr.17.snps.rs.id$V1, sep='')
+chr.17.snp.location <- paste('17',chr.17.snps.rs.id$V12, sep=':')
+final.table.remap.chr.17.snps <- data.frame(chr.17.rs.snp.id, chr.17.snp.location)
+idx.chr.18 <- which(remap.results$mapped_id ==18)
+remap.chr.18 <- remap.results[idx.chr.18, ]
+idx.match.chr.18 <- match(remap.chr.18$mapped_start, chr.18.snps$V12)
+chr.18.snps.from.rematch <- chr.18.snps[idx.match.chr.18, ]
+chr.18.snps.rs.id <- chr.18.snps.from.rematch[, c(1,12)]
+chr.18.rs.snp.id <- paste('rs',chr.18.snps.rs.id$V1, sep='')
+chr.18.snp.location <- paste('18',chr.18.snps.rs.id$V12, sep=':')
+final.table.remap.chr.18.snps <- data.frame(chr.18.rs.snp.id, chr.18.snp.location)
+idx.chr.19 <- which(remap.results$mapped_id ==19)
+remap.chr.19 <- remap.results[idx.chr.19, ]
+idx.match.chr.19 <- match(remap.chr.19$mapped_start, chr.19.snps$V12)
+chr.19.snps.from.rematch <- chr.19.snps[idx.match.chr.19, ]
+chr.19.snps.rs.id <- chr.19.snps.from.rematch[, c(1,12)]
+chr.19.rs.snp.id <- paste('rs',chr.19.snps.rs.id$V1, sep='')
+chr.19.snp.location <- paste('19',chr.19.snps.rs.id$V12, sep=':')
+final.table.remap.chr.19.snps <- data.frame(chr.19.rs.snp.id, chr.19.snp.location)
+idx.chr.20 <- which(remap.results$mapped_id ==20)
+remap.chr.20 <- remap.results[idx.chr.20, ]
+idx.match.chr.20 <- match(remap.chr.20$mapped_start, chr.20.snps$V12)
+chr.20.snps.from.rematch <- chr.20.snps[idx.match.chr.20, ]
+chr.20.snps.rs.id <- chr.20.snps.from.rematch[, c(1,12)]
+chr.20.rs.snp.id <- paste('rs',chr.20.snps.rs.id$V1, sep='')
+chr.20.snp.location <- paste('20',chr.20.snps.rs.id$V12, sep=':')
+final.table.remap.chr.20.snps <- data.frame(chr.20.rs.snp.id, chr.20.snp.location)
+idx.chr.21 <- which(remap.results$mapped_id ==21)
+remap.chr.21 <- remap.results[idx.chr.21, ]
+idx.match.chr.21 <- match(remap.chr.21$mapped_start, chr.21.snps$V12)
+chr.21.snps.from.rematch <- chr.21.snps[idx.match.chr.21, ]
+chr.21.snps.rs.id <- chr.21.snps.from.rematch[, c(1,12)]
+chr.21.rs.snp.id <- paste('rs',chr.21.snps.rs.id$V1, sep='')
+chr.21.snp.location <- paste('21',chr.21.snps.rs.id$V12, sep=':')
+final.table.remap.chr.21.snps <- data.frame(chr.21.rs.snp.id, chr.21.snp.location)
+idx.chr.22 <- which(remap.results$mapped_id ==22)
+remap.chr.22 <- remap.results[idx.chr.22, ]
+idx.match.chr.22 <- match(remap.chr.22$mapped_start, chr.22.snps$V12)
+chr.22.snps.from.rematch <- chr.22.snps[idx.match.chr.22, ]
+chr.22.snps.rs.id <- chr.22.snps.from.rematch[, c(1,12)]
+chr.22.rs.snp.id <- paste('rs',chr.22.snps.rs.id$V1, sep='')
+chr.22.snp.location <- paste('22',chr.22.snps.rs.id$V12, sep=':')
+final.table.remap.chr.22.snps <- data.frame(chr.22.rs.snp.id, chr.22.snp.location)
+
+## rename dataframes names to NA to combine with cbind
+
+names(final.table.remap.chr.1.snps) <- rep(NA, ncol(final.table.remap.chr.1.snps))
+
+names(final.table.remap.chr.2.snps) <- rep(NA, ncol(final.table.remap.chr.2.snps))
+
+names(final.table.remap.chr.3.snps) <- rep(NA, ncol(final.table.remap.chr.3.snps))
+
+names(final.table.remap.chr.4.snps) <- rep(NA, ncol(final.table.remap.chr.4.snps))
+
+names(final.table.remap.chr.5.snps) <- rep(NA, ncol(final.table.remap.chr.5.snps))
+
+names(final.table.remap.chr.6.snps) <- rep(NA, ncol(final.table.remap.chr.6.snps))
+
+names(final.table.remap.chr.7.snps) <- rep(NA, ncol(final.table.remap.chr.7.snps))
+
+names(final.table.remap.chr.8.snps) <- rep(NA, ncol(final.table.remap.chr.8.snps))
+
+names(final.table.remap.chr.9.snps) <- rep(NA, ncol(final.table.remap.chr.9.snps))
+
+names(final.table.remap.chr.10.snps) <- rep(NA, ncol(final.table.remap.chr.10.snps))
+
+names(final.table.remap.chr.11.snps) <- rep(NA, ncol(final.table.remap.chr.11.snps))
+
+names(final.table.remap.chr.12.snps) <- rep(NA, ncol(final.table.remap.chr.12.snps))
+
+names(final.table.remap.chr.13.snps) <- rep(NA, ncol(final.table.remap.chr.13.snps))
+
+names(final.table.remap.chr.14.snps) <- rep(NA, ncol(final.table.remap.chr.14.snps))
+
+names(final.table.remap.chr.15.snps) <- rep(NA, ncol(final.table.remap.chr.15.snps))
+
+names(final.table.remap.chr.16.snps) <- rep(NA, ncol(final.table.remap.chr.16.snps))
+
+names(final.table.remap.chr.17.snps) <- rep(NA, ncol(final.table.remap.chr.17.snps))
+
+names(final.table.remap.chr.18.snps) <- rep(NA, ncol(final.table.remap.chr.18.snps))
+
+names(final.table.remap.chr.19.snps) <- rep(NA, ncol(final.table.remap.chr.19.snps))
+
+names(final.table.remap.chr.20.snps) <- rep(NA, ncol(final.table.remap.chr.20.snps))
+
+names(final.table.remap.chr.21.snps) <- rep(NA, ncol(final.table.remap.chr.21.snps))
+
+names(final.table.remap.chr.22.snps) <- rep(NA, ncol(final.table.remap.chr.22.snps))
+
+## make final table of all chromosomes
+
+FINAL.TABLE <- rbind(final.table.remap.chr.1.snps, final.table.remap.chr.2.snps, final.table.remap.chr.3.snps, final.table.remap.chr.4.snps, final.table.remap.chr.5.snps, final.table.remap.chr.6.snps, final.table.remap.chr.7.snps, final.table.remap.chr.8.snps, final.table.remap.chr.9.snps, final.table.remap.chr.10.snps, final.table.remap.chr.11.snps, final.table.remap.chr.12.snps, final.table.remap.chr.13.snps, final.table.remap.chr.14.snps, final.table.remap.chr.15.snps, final.table.remap.chr.16.snps, final.table.remap.chr.17.snps, final.table.remap.chr.18.snps, final.table.remap.chr.19.snps, final.table.remap.chr.20.snps, final.table.remap.chr.21.snps, final.table.remap.chr.22.snps)
+
+## change the column names of the final table
+
+colnames(FINAL.TABLE) <- c("rs.SNP.ID", "SNP.position")
+
+## split columns using colsplit from R package reshape2
+
+split.snp.location <- colsplit(as.character(FINAL.TABLE$SNP.position), ":", c("Chr", "Location"))
+
+final.snp.table.2 <- cbind(FINAL.TABLE, split.snp.location)
+
+## flank each base pair by 10^6 bases 
+
+BPos <- final.snp.table.2$Location - 10^6
+
+PosE <- final.snp.table.2$Location + 10^6
+
+## combine all together
+
+final.snp.table.3 <- cbind(final.snp.table.2, BPos)
+
+final.snp.table.4 <- cbind(final.snp.table.3, PosE)
+
+## remove column not needed for bash script
+
+final.snp.table.4$SNP.position <- NULL
+
+## rename columns for bash script
+
+colnames(final.snp.table.4) <- c("SNP", "Chr", "Pos", "BPos", "PosE")
+
+### write file for bash script
+
+write.table(final.snp.table.4, file = "GWAS_Catalog_for_bash.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 2. Use the updated SNP locations and flanking regions to generate a list of all SNPs in linkage disequilibrium and combine all SNPs
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### upload file to linux machine
+
+## convert from dos to unix
+
+dos2unix GWAS_Catalog_for_bash.tsv
+
+## run script for LD expansion for r2 of 0 and r2 of 0.8 
+
+while IFS=$'\t' read -r SNP Chr Pos BPos PosE; do
+        mkdir -p /results.from.plink/GWAS_Catalog/${SNP}
+        tabix -fh ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${Chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz ${Chr}:${BPos}-${PosE} > /results.from.plink/GWAS_Catalog/${SNP}/${SNP}_vcf.vcf # extract genotype data for region from 1000 Genomes
+        vcftools --vcf /results.from.plink/GWAS_Catalog/${SNP}/${SNP}_vcf.vcf --out /results.from.plink/GWAS_Catalog/${SNP}/${SNP} --plink-tped # convert vcf to plink tped file format
+        plink --tfile /results.from.plink/GWAS_Catalog/${SNP}/${SNP} --r2 --noweb --allow-no-sex --ld-snp ${SNP} --ld-window-kb 1000 --ld-window 99999 --ld-window-r2 0.0 --out /results.from.plink/GWAS_Catalog/${SNP}/${SNP}_EUR_LD --keep /populations/EUR.1000.genomes.txt # extract all SNPs in LD 
+        plink --tfile /results.from.plink/GWAS_Catalog/${SNP}/${SNP} --r2 --noweb --allow-no-sex --ld-snp ${SNP} --ld-window-kb 1000 --ld-window 99999 --ld-window-r2 0.8 --out /results.from.plink/GWAS_Catalog/${SNP}/${SNP}_EUR_LD.8 --keep /populations/EUR.1000.genomes.txt # extract all SNPs in LD with r2 0.8
+        rm /results.from.plink/GWAS_Catalog/${SNP}/${SNP}.tped # remove temp file
+        rm /results.from.plink/GWAS_Catalog/${SNP}/${SNP}_vcf.vcf # remove temp file
+done < GWAS_Catalog_for_bash.tsv
+
+### now, run new R session
+
+## find all SNPs for r2 0.8
+
+file.paths <- Sys.glob("/results.from.plink/GWAS_Catalog/rs*/*_EUR_LD.8.ld") 
+
+## ignore SNPs that are empty
+
+file.paths.2 <- file.paths[which(file.size(file.paths) != 0)]
+
+## combine all SNPs together 
+
+all.LD.SNPs <- lapply(file.paths.2, read.table, header = T)
+
+all.snps.ld.df <- do.call(rbind.data.frame, all.LD.SNPs) 
+
+## remove duplicated SNPs
+
+unique.ld.combined.snps.idx <- which(duplicated(all.snps.ld.df[, c(4,5,6)]) == "FALSE")
+
+unique.ld.combined.snps <- all.snps.ld.df[unique.ld.combined.snps.idx, ] 
+
+## write new LD SNPs
+
+write.table(unique.ld.combined.snps, file = 'GWAS_Catalog_LD_SNPs.tsv', sep = "\t", quote = FALSE, row.names = FALSE)
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 3. Identify the SNPs acting in functional roles in the genome as eQTLs
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### run new R session
+
+## load GTEx lung tissue eQTLs from version 6 downloaded from https://www.gtexportal.org/home/datasets with registration
+
+gtex.new.v6.lung <- read.delim("/GTEx_Analysis_V6_eQTLs/Lung_Analysis.snpgenes", header = TRUE, sep = "\t")
+
+GWAS_Catalog.ld.snps <- read.delim("GWAS_Catalog_LD_SNPs.tsv", header = TRUE)
+
+GWAS_Catalog.match.gtex.idx <- match(gtex.new.v6.lung$rs_id_dbSNP142_GRCh37p13, GWAS_Catalog.ld.snps$SNP_B)
+
+GWAS_Catalog.match.gtex.idx.no.na <- which(GWAS_Catalog.match.gtex.idx != "NA") 
+
+GWAS_Catalog.gtex.single.tissue.eqtl.results <- gtex.new.v6.lung[GWAS_Catalog.match.gtex.idx.no.na, ] 
+
+## write results to a new file
+
+write.table(GWAS_Catalog.gtex.single.tissue.eqtl.results, file = "GWAS_Catalog_GTEx_lung_tissue_eQTLs.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+
+### now load GTEx multi-tissue eQTLs pilot phase version from https://www.gtexportal.org/home/datasets with registration
+
+multi.tissue.eqtl.gtex.all <- read.table("/Multi_tissue_eQTL_GTEx_Pilot_Phase_datasets/res_final_amean_com_genes_com_snps_all.txt", header = TRUE)
+
+GWAS_Catalog.match.gtex.multi.idx <- match(multi.tissue.eqtl.gtex.all$snp, GWAS_Catalog.ld.snps$SNP_B)
+
+GWAS_Catalog.match.gtex.idx.no.na <- which(GWAS_Catalog.match.gtex.multi.idx != "NA")
+
+multi.tissue.eqtl.GWAS_Catalog.ld.snps <- multi.tissue.eqtl.gtex.all[GWAS_Catalog.match.gtex.idx.no.na, ] 
+
+## generate histogram to identify cutoff for significance
+
+hist(multi.tissue.eqtl.GWAS_Catalog.ld.snps$Lung) # choose 0.80 as cutoff
+
+GWAS_Catalog.80.idx <- which(multi.tissue.eqtl.GWAS_Catalog.ld.snps$Lung >= 0.80)
+
+GWAS_Catalog.gtex.multi.80 <- multi.tissue.eqtl.GWAS_Catalog.ld.snps[GWAS_Catalog.80.idx, ] 
+
+### write all multi-tissue eQTLs and filtered set to new files
+
+write.table(multi.tissue.eqtl.GWAS_Catalog.ld.snps, file = "GWAS_Catalog_GTEx_multi_tissue_eQTLs.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+
+write.table(GWAS_Catalog.gtex.multi.80, file = "GWAS_Catalog_GTEx_multi_tissue_eQTLs_filtered_0.8.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+
+### load lung tissue eQTLs located in Table S2A from Hao et al. PLoS Genetics 2012 http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1003029
+### first remove trans eQTLs from file in Excel to only use cis eQTLs
+
+lung.cis.eqtl.plos <- read.csv("journal.pgen.1003029.s006.csv", skip = 1, header = TRUE)
+
+plos.gwas_catalog.idx.1 <- match(lung.cis.eqtl.plos$SNP, GWAS_Catalog.ld.snps$SNP_B)
+
+plos.gwas_catalog.idx.no.na <- which(plos.gwas_catalog.idx.1 != "NA")
+
+ld.snps.gwas_catalog.lung.cis.eqtl.plos <- lung.cis.eqtl.plos[plos.gwas_catalog.idx.no.na, ] 
+
+write.table(ld.snps.gwas_catalog.lung.cis.eqtl.plos, file="Hao_lung_eQTLs_GWAS_Catalog.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 4. Identify the SNPs acting in functional roles in the genome as enhancers and extract their target genes
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+## first generate a file suitable for PLINK
+
+## load new R session
+
+ld.snps.combined <- read.delim("GWAS_Catalog_LD_SNPs.tsv", header=TRUE)
+
+## pull out the columns needed CHR, BP, SNP
+
+ld.snps.combined.for.plink <- ld.snps.combined[, c(4,5,6)]
+
+## rearrange the positions for PLINK 
+
+ld.snps.combined.for.plink <- ld.snps.combined.for.plink[, c(1,3,2)]
+
+## rename the columns 
+
+colnames(ld.snps.combined.for.plink) <- c("CHR", "SNP", "BP")
+
+## write new file 
+
+write.table(ld.snps.combined.for.plink, file = "GWAS_Catalog_SNPs_for_PLINK_gene_report.tsv", sep="\t", row.names = FALSE, quote = FALSE) 
+
+###################################################################################################################################################################################
+### now run the following code for PLINK GENE REPORT on linux using the set of FANTOM5 permissive enhancers located at http://enhancer.binf.ku.dk/presets/permissive_enhancers.bed
+###################################################################################################################################################################################
+
+### modify FANTOM file for use in PLINK
+
+## remove the chr 
+
+sed 's/chr//g' permissive_enhancers.bed > permissive_enhancers.no.chr.bed
+
+## run PLINK
+
+plink --noweb --gene-report GWAS_Catalog_SNPs_for_PLINK_gene_report.tsv --gene-list permissive_enhancers.no.chr.bed --gene-list-border 0
+
+## run custom java script (located on this website) to reformat the results
+
+java plink_glist plink.range.report /results/prr.tab.GWAS_Catalog.ld.snps.out /results/prr.minp.tab.GWAS_Catalog.ld.snps.out
+
+### now map enhancer regions with SNPs to target genes using the FANTOM5 enhancer tss associations
+### located at http://enhancer.binf.ku.dk/presets/enhancer_tss_associations.bed 
+
+## load R session
+
+## load packages
+
+library(reshape2)
+
+## load file of enhancer target genes FANTOM 5
+
+tss.associations <- read.table("enhancer_tss_associations.bed")
+
+## split column with enhancer and gene name using colsplit from reshape2 r package
+
+tss_split_1 <- colsplit(tss.associations$V4, ";", c("enhancer", "NCBI ref sequence", "Gene", "score", "FDR"))
+
+## now load FANTOM 5 results
+
+fantom.5.results.GWAS_Catalog <- read.table("prr.tab.GWAS_Catalog.ld.snps.out")
+
+chr.fantom5.results.GWAS_Catalog <- paste("chr", fantom.5.results.GWAS_Catalog$V1, sep = "") ## adds chr to match
+
+fantom.5.results.GWAS_Catalog$Enhancer <- chr.fantom5.results.GWAS_Catalog
+
+enhancer.split.1.fantom5.GWAS_Catalog <- colsplit(fantom.5.results.GWAS_Catalog$Enhancer, "_", c("Enhancer", "2nd")) # split column for enhancers
+
+fantom.5.results.GWAS_Catalog$Enhancer_TO_USE <- enhancer.split.1.fantom5.GWAS_Catalog
+
+tss.fantom5.match.GWAS_Catalog.idx <- match(tss_split_1$enhancer, enhancer.split.1.fantom5.GWAS_Catalog$Enhancer)
+
+tss.fantom5.match.GWAS_Catalog.idx.no.na <- which(tss.fantom5.match.GWAS_Catalog.idx != "NA")
+
+final.set.fantom5.GWAS_Catalog.enhancers.with.tss <- tss_split_1[tss.fantom5.match.GWAS_Catalog.idx.no.na, ] 
+
+write.table(final.set.fantom5.GWAS_Catalog.enhancers.with.tss, file = "GWAS_Catalog_fantom5_enhancers_with_target_genes.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+
+########################################################################################################
+### now run BedTools IntersectBED function to identify SNPs in enhancer regions from IM-PET samples from He et al. PNAS 2014
+########################################################################################################
+
+## first generate correctly formatted files in REPORT
+
+GWAS_Catalog.ld.snps <- read.delim("GWAS_Catalog_LD_SNPs.tsv", sep = "\t", header = TRUE)
+
+idx.chr.paste <- paste("chr", GWAS_Catalog.ld.snps$CHR_B, sep= "")
+
+GWAS_Catalog.ld.snps$chr <- idx.chr.paste
+
+GWAS_Catalog.ld.snps.for.bedtools <- GWAS_Catalog.ld.snps[, c(8, 5, 5, 6)]
+
+write.table(GWAS_Catalog.ld.snps.for.bedtools, file="GWAS_Catalog.ld.SNPs.for.bedtools.bed", row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
+
+### quit R and back on linux command line
+
+## need to sort by chromosome 
+
+sort -k1 GWAS_Catalog.ld.SNPs.for.bedtools.bed > GWAS_Catalog.ld.SNPs.for.bedtools.sorted.bed   
+
+## need to convert files to unix format
+
+dos2unix GWAS_Catalog.ld.SNPs.for.bedtools.sorted.bed 
+
+## now, run bedtools using enhancer target gene data from He et al. PNAS 2014 Supplemntal http://www.pnas.org/content/111/21/E2191.full
+## extract IMR90 and NHLF data tabs from Excel sheet save as .csv files
+
+## run for IMR90 lung cell line 
+
+bedtools intersect -wb -a GWAS_Catalog.ld.SNPs.for.bedtools.sorted.bed -b /IM_PET/imr90.ep.predictions.from.im.pet.bed > IMR90.GWAS_Catalog.IMPET.preductions.bed
+
+## run for NHLF lung cell line
+
+bedtools intersect -wb -a GWAS_Catalog.ld.SNPs.for.bedtools.sorted.bed -b  /IM_PET/nhlf.ep.predictions.from.im.pet.bed > NHLF.GWAS_Catalog.IMPET.predictions.bed
+
+## now remove genes with RPKM = 0 and finalize 
+
+## load new R session
+
+## load IM-PET results from bedtools into R
+
+impet.imr90.results.GWAS_Catalog <- read.delim("IMR90.GWAS_Catalog.IMPET.preductions.bed", sep = "\t", header = FALSE)
+
+impet.nhlf.results.GWAS_Catalog <- read.delim("NHLF.GWAS_Catalog.IMPET.predictions.bed", sep = "\t", header = FALSE)
+
+## make the new column names from original data source copy and paste from Excel sheet 
+
+impet.colnames <- c("Chr","Bpos","PosE","SNP","Enh.Chr","Start","End","Prom.Chr","TSS","Strand","ID","RPKM","FC","Specificity","IM-PET_Score","DIS","EPC","TPC","COEV","CSIANN_Score","Nearest")
+
+## add new column names to the results
+
+colnames(impet.imr90.results.GWAS_Catalog) <- impet.colnames
+
+colnames(impet.nhlf.results.GWAS_Catalog) <- impet.colnames
+
+## remove genes with RPKM = 0
+
+idx.imr90.GWAS_Catalog <- which(impet.imr90.results.GWAS_Catalog$RPKM == 0) 
+
+idx.nhlf.GWAS_Catalog <- which(impet.nhlf.results.GWAS_Catalog$RPKM == 0) 
+
+final.impet.imr90.results.GWAS_Catalog <- impet.imr90.results.GWAS_Catalog[-idx.imr90.GWAS_Catalog, ] 
+
+final.impet.nhlf.results.GWAS_Catalog <- impet.nhlf.results.GWAS_Catalog[-idx.nhlf.GWAS_Catalog, ] 
+
+## write final files
+
+write.table(final.impet.imr90.results.GWAS_Catalog, file = "IMPET.IMR90.enhancer.target.genes.GWAS_Catalog.tsv", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+write.table(final.impet.nhlf.results.GWAS_Catalog, file = "IMPET.NHLF.enhancer.target.genes.GWAS_Catalog.tsv", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+

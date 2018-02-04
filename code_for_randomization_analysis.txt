@@ -1,0 +1,116 @@
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+## This is the code used to run the randomization analysis using the GWAS lung cancer summary results from Landi et al. 2009 AJHG http://www.sciencedirect.com/science/article/pii/S000292970900408X?via%3Dihub
+## for the manuscript titled Weak sharing of genetic association signals in three lung cancer subtypes: evidence at the SNP, gene, regulation and pathway levels.
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 1. Generate files for PLINK from all SNPs p < 1 x 10-3 from GWAS summary results for all three subtypes, all chip SNPs, and prune these SNPs using PLINK
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+## load all genotyped SNPs for LUAD (all SNPs are the same for each subtype and just differ in p-values, so can use any subtype for the total number of chip SNPs to use)
+
+luad <- read.delim("NCI_LUAD.txt", header = TRUE)
+
+## extract SNPs only and write to new file
+
+chip.snps.for.plink <- as.data.frame(luad$SNP)
+
+write.table(chip.snps.for.plink, "chip_SNPs_for_plink.tsv", col.names = FALSE, row.names = FALSE, quote = FALSE, sep = "\t")
+
+## load original Landi et al. GWAS SNPs(p < 1 x 10-3) per subtype and modify for PLINK
+
+luad.no.ld <- read.delim("luad_sig_non_ld.tsv", header = TRUE)
+
+lusc.no.ld <- read.delim("lusc_sig_non_ld.tsv", header = TRUE)
+
+sclc.no.ld <- read.delim("sclc_sig_non_ld.tsv", header = TRUE)
+
+## extract SNP list to use for PLINK
+
+luad.no.ld.snps <- as.data.frame(luad.no.ld$SNP)
+
+lusc.no.ld.snps <- as.data.frame(lusc.no.ld$SNP)
+
+sclc.no.ld.snps <- as.data.frame(sclc.no.ld$SNP)
+
+## write new files for PLINK
+
+write.table(luad.no.ld.snps, file = "luad_no_ld_for_plink.tsv", col.names = FALSE, row.names = FALSE, quote = FALSE, sep = "\t")
+
+write.table(lusc.no.ld.snps, file = "lusc_no_ld_for_plink.tsv", col.names = FALSE, row.names = FALSE, quote = FALSE, sep = "\t")
+
+write.table(sclc.no.ld.snps, file = "sclc_no_ld_for_plink.tsv", col.names = FALSE, row.names = FALSE, quote = FALSE, sep = "\t")
+
+### upload files to linux machine
+### download PLINK formatted 1000 Genomes EUROPEAN file from https://vegas2.qimrberghofer.edu.au/g1000p3_EUR.tar.gz and extract
+### output will be sets of trimmed SNPs (prune.in) that will be used for randomization
+
+#### now, use the GWAS chip file and the SNPs p < 1 x 10-3 for LUAD, LUSC, and SCLC to trim all SNPs in LD using the 1000 Genomes file from VEGAS website
+
+plink-1.07-x86_64/plink --noweb --bfile g1000p3_EUR --indep-pairwise 50 5 0.5 --extract luad_no_ld_for_plink.tsv --out luad_no_ld_pruned
+
+plink-1.07-x86_64/plink --noweb --bfile g1000p3_EUR --indep-pairwise 50 5 0.5 --extract lusc_no_ld_for_plink.tsv --out lusc_no_ld_pruned
+
+plink-1.07-x86_64/plink --noweb --bfile g1000p3_EUR --indep-pairwise 50 5 0.5 --extract sclc_no_ld_for_plink.tsv --out sclc_no_ld_pruned
+
+## now work with chip file 
+
+plink-1.07-x86_64/plink --noweb --bfile g1000p3_EUR --indep-pairwise 50 5 0.5 --extract chip_SNPs_for_plink.tsv --out gwas_chip_no_ld_pruned
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 2. Run randomization for trimmed SNPs
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### start R session 
+
+## load all files that are pruned independent SNPs
+
+luad <- read.delim("luad_no_ld_pruned.prune.in", header = FALSE)
+
+lusc <- read.delim("lusc_no_ld_pruned.prune.in", header = FALSE)
+
+sclc <- read.delim("sclc_no_ld_pruned.prune.in", header = FALSE)
+
+chip.trim <- read.delim("gwas_chip_no_ld_pruned.prune.in", header = FALSE)
+
+# sample same number of trimmed SNPs for each subtype from the chip trimmed background
+# in loop identify all overlap and two-way overlap
+
+set.seed(200) # sets the seed so reproducible
+
+overlap.all <- list()
+tmp_luad <- list()
+tmp_lusc <- list()
+tmp_sclc <- list()
+overlap.luad.lusc <- list()
+overlap.luad.sclc <- list()
+overlap.lusc.sclc <- list()
+
+for (i in 1:10000) { ## sample 10,000 sets of SNPs
+tmp_luad[[i]] <- sample(chip.trim$V1, nrow(luad), replace = FALSE)
+tmp_lusc[[i]] <- sample(chip.trim$V1, nrow(lusc), replace = FALSE)
+tmp_sclc[[i]] <- sample(chip.trim$V1, nrow(sclc), replace = FALSE)
+overlap.luad.lusc[[i]] <- length(intersect(tmp_luad[[i]], tmp_lusc[[i]]))
+overlap.luad.sclc[[i]] <- length(intersect(tmp_luad[[i]], tmp_sclc[[i]]))
+overlap.lusc.sclc[[i]] <- length(intersect(tmp_lusc[[i]], tmp_sclc[[i]]))
+overlap.all[[i]] <- length(intersect(intersect(tmp_luad[[i]], tmp_lusc[[i]]), tmp_sclc[[i]]))
+}
+
+
+
+
+
+
+
+
+

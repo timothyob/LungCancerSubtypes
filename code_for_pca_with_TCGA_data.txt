@@ -1,0 +1,1214 @@
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+## This is the code used to perform the principle components analysis (PCA) using genotype data from TCGA
+## for the manuscript titled Weak sharing of genetic association signals in three lung cancer subtypes: evidence at the SNP, gene, regulation and pathway levels.
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 1. Format genotype files downloaded from TCGA, extract blood normal samples, and exclude all non-white and white hispanic samples
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### all genotype samples and clinical information downloaded from https://portal.gdc.cancer.gov/legacy-archive/search/f using the GDC transfer tool for six cancer types (after permission):
+### LUAD, LUSC, HNSC, BLCA, GBM, and LGG
+### for each cancer type, extract sdrf.txt file from one of the samples (file is same for every sample) to use for annotation
+### 
+
+## start new R session for working with LUAD
+
+## load libraries
+
+library('reshape2')
+
+## load all samples from TCGA for LUAD 
+
+all.luad <- list.files("LUAD/", recursive = TRUE, pattern = "*.birdseed.data.txt$")
+
+setwd("LUAD/") ## change directory for LUAD samples
+
+## load sdrf file that contains the naming information for all LUAD samples
+
+luad.names <- read.delim("broad.mit.edu_LUAD.Genome_Wide_SNP_6.sdrf.txt", header = TRUE)
+
+all.luad.split <- colsplit(all.luad, "/", c("folder_name", "sample_name")) ## split the file names to be compatible with the sdrf.txt file
+
+luad.final.matched <- luad.names[match(all.luad.split$sample_name, luad.names$Derived.Array.Data.Matrix.File.1), c(1,2,31)] ## match file names to sdrf 
+
+luad.tcga.split.barcode <- colsplit(luad.final.matched$Comment..TCGA.Barcode., "-", c("project", "TSS", "participant", "sample", "portion", "plate", "center"))
+
+## extract the list of germline blood only files using the TCGA code
+
+luad.germline.blood <- luad.final.matched[grep(10, luad.tcga.split.barcode$sample), ]
+
+## load the clinical file from TCGA
+
+luad.clin <- read.delim('nationwidechildrens.org_clinical_patient_luad.txt', skip = 1)
+
+luad.clin.to.use <- luad.clin[-1, ] ## remove first row to use file for matching
+
+### extract only white non-hispanic samples
+
+luad.samples.white <- luad.clin.to.use[which(luad.clin.to.use$race == "WHITE"), ] ## extract white only samples
+
+luad.samples.final.pop <- luad.samples.white[which(luad.samples.white$ethnicity == "NOT HISPANIC OR LATINO"), ] ## remove Hispanic or Latino samples
+
+## split columns and filter blood germline list to exclude non-white or white hispanic samples
+
+luad.germline.blood.split <- colsplit(luad.germline.blood$Comment..TCGA.Barcode., "-10", c("patient_ID", "sample_info"))
+
+luad.germline.blood$patient_ID <- luad.germline.blood.split$patient_ID
+
+luad.germline.blood.samples.white.only <- luad.germline.blood[which(luad.germline.blood$patient_ID %in% luad.samples.final.pop$bcr_patient_barcode), ]
+
+## write this list to a new file 
+
+write.table(luad.germline.blood.samples.white.only, file = "/LUAD/blood_normal_white_only_LUAD.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+______________________________________________________________________________________________________________________________________________________________________________________________________
+
+## start new R session for working with LUSC
+
+## load libraries
+
+library('reshape2')
+
+## load all samples from TCGA for LUAD 
+
+all.lusc <- list.files("LUSC/", recursive = TRUE, pattern = "*.birdseed.data.txt$")
+
+setwd("LUSC/") ## change directory for LUSC samples
+
+## load sdrf file that contains the naming information for all LUSC samples
+
+lusc.names <- read.delim("broad.mit.edu_LUSC.Genome_Wide_SNP_6.sdrf.txt", header = TRUE)
+
+all.lusc.split <- colsplit(all.lusc, "/", c("folder_name", "sample_name")) ## split the file names to be compatible with the sdrf.txt file
+
+lusc.final.matched <- lusc.names[match(all.lusc.split$sample_name, lusc.names$Derived.Array.Data.Matrix.File.1), c(1,2,31)] ## match file names to sdrf 
+
+lusc.tcga.split.barcode <- colsplit(lusc.final.matched$Comment..TCGA.Barcode., "-", c("project", "TSS", "participant", "sample", "portion", "plate", "center"))
+
+## extract the list of germline blood only files using the TCGA code
+
+lusc.germline.blood <- lusc.final.matched[grep(10, lusc.tcga.split.barcode$sample), ]
+
+## load the clinical file from TCGA
+
+lusc.clin <- read.delim('nationwidechildrens.org_clinical_patient_lusc.txt', skip = 1)
+
+lusc.clin.to.use <- lusc.clin[-1, ] ## remove first row to use file for matching
+
+### extract only white non-hispanic samples
+
+lusc.samples.white <- lusc.clin.to.use[which(lusc.clin.to.use$race == "WHITE"), ] ## extract white only samples
+
+lusc.samples.final.pop <- lusc.samples.white[which(lusc.samples.white$ethnicity == "NOT HISPANIC OR LATINO"), ] ## remove Hispanic or Latino samples
+
+## split columns and filter blood germline list to exclude non-white or white hispanic samples
+
+lusc.germline.blood.split <- colsplit(lusc.germline.blood$Comment..TCGA.Barcode., "-10", c("patient_ID", "sample_info"))
+
+lusc.germline.blood$patient_ID <- lusc.germline.blood.split$patient_ID
+
+lusc.germline.blood.samples.white.only <- lusc.germline.blood[which(lusc.germline.blood$patient_ID %in% lusc.samples.final.pop$bcr_patient_barcode), ]
+
+## write this list to a new file 
+
+write.table(lusc.germline.blood.samples.white.only, file = "/LUSC/blood_normal_white_only_LUSC.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+______________________________________________________________________________________________________________________________________________________________________________________________________
+
+## start new R session for working with HNSC
+
+## load libraries
+
+library('reshape2')
+
+## load all samples from TCGA for HNSC 
+
+all.hnsc <- list.files("HNSC/", recursive = TRUE, pattern = "*.birdseed.data.txt$")
+
+setwd("HNSC/") ## change directory for HNSC samples
+
+## load sdrf file that contains the naming information for all HNSC samples
+
+hnsc.names <- read.delim("broad.mit.edu_HNSC.Genome_Wide_SNP_6.sdrf.txt", header = TRUE)
+
+all.hnsc.split <- colsplit(all.hnsc, "/", c("folder_name", "sample_name")) ## split the file names to be compatible with the sdrf.txt file
+
+hnsc.final.matched <- hnsc.names[match(all.hnsc.split$sample_name, hnsc.names$Derived.Array.Data.Matrix.File.1), c(1,2,31)] ## match file names to sdrf 
+
+hnsc.tcga.split.barcode <- colsplit(hnsc.final.matched$Comment..TCGA.Barcode., "-", c("project", "TSS", "participant", "sample", "portion", "plate", "center"))
+
+## extract the list of germline blood only files using the TCGA code
+
+hnsc.germline.blood <- hnsc.final.matched[grep(10, hnsc.tcga.split.barcode$sample), ]
+
+## load the clinical file from TCGA
+
+hnsc.clin <- read.delim('nationwidechildrens.org_clinical_patient_hnsc.txt', skip = 1)
+
+hnsc.clin.to.use <- hnsc.clin[-1, ] ## remove first row to use file for matching
+
+### extract only white non-hispanic samples
+
+hnsc.samples.white <- hnsc.clin.to.use[which(hnsc.clin.to.use$race == "WHITE"), ] ## extract white only samples
+
+hnsc.samples.final.pop <- hnsc.samples.white[which(hnsc.samples.white$ethnicity == "NOT HISPANIC OR LATINO"), ] ## remove Hispanic or Latino samples
+
+## split columns and filter blood germline list to exclude non-white or white hispanic samples
+
+hnsc.germline.blood.split <- colsplit(hnsc.germline.blood$Comment..TCGA.Barcode., "-10", c("patient_ID", "sample_info"))
+
+hnsc.germline.blood$patient_ID <- hnsc.germline.blood.split$patient_ID
+
+hnsc.germline.blood.samples.white.only <- hnsc.germline.blood[which(hnsc.germline.blood$patient_ID %in% hnsc.samples.final.pop$bcr_patient_barcode), ]
+
+## write this list to a new file 
+
+write.table(hnsc.germline.blood.samples.white.only, file = "/HNSC/blood_normal_white_only_HNSC.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+______________________________________________________________________________________________________________________________________________________________________________________________________
+
+## start new R session for working with BLCA
+
+## load libraries
+
+library('reshape2')
+
+## load all samples from TCGA for BLCA 
+
+all.blca <- list.files("BLCA/", recursive = TRUE, pattern = "*.birdseed.data.txt$")
+
+setwd("BLCA/") ## change directory for BLCA samples
+
+## load sdrf file that contains the naming information for all BLCA samples
+
+blca.names <- read.delim("broad.mit.edu_BLCA.Genome_Wide_SNP_6.sdrf.txt", header = TRUE)
+
+all.blca.split <- colsplit(all.blca, "/", c("folder_name", "sample_name")) ## split the file names to be compatible with the sdrf.txt file
+
+blca.final.matched <- blca.names[match(all.blca.split$sample_name, blca.names$Derived.Array.Data.Matrix.File.1), c(1,2,31)] ## match file names to sdrf 
+
+blca.tcga.split.barcode <- colsplit(blca.final.matched$Comment..TCGA.Barcode., "-", c("project", "TSS", "participant", "sample", "portion", "plate", "center"))
+
+## extract the list of germline blood only files using the TCGA code
+
+blca.germline.blood <- blca.final.matched[grep(10, blca.tcga.split.barcode$sample), ]
+
+## load the clinical file from TCGA
+
+blca.clin <- read.delim('nationwidechildrens.org_clinical_patient_blca.txt', skip = 1)
+
+blca.clin.to.use <- blca.clin[-1, ] ## remove first row to use file for matching
+
+### extract only white non-hispanic samples
+
+blca.samples.white <- blca.clin.to.use[which(blca.clin.to.use$race == "WHITE"), ] ## extract white only samples
+
+blca.samples.final.pop <- blca.samples.white[which(blca.samples.white$ethnicity == "NOT HISPANIC OR LATINO"), ] ## remove Hispanic or Latino samples
+
+## split columns and filter blood germline list to exclude non-white or white hispanic samples
+
+blca.germline.blood.split <- colsplit(blca.germline.blood$Comment..TCGA.Barcode., "-10", c("patient_ID", "sample_info"))
+
+blca.germline.blood$patient_ID <- blca.germline.blood.split$patient_ID
+
+blca.germline.blood.samples.white.only <- blca.germline.blood[which(blca.germline.blood$patient_ID %in% blca.samples.final.pop$bcr_patient_barcode), ]
+
+write.table(blca.germline.blood.samples.white.only, file = "/BLCA/blood_normal_white_only_BLCA.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+______________________________________________________________________________________________________________________________________________________________________________________________________
+
+## start new R session for working with GBM
+
+## load libraries
+
+library('reshape2')
+
+## load all samples from TCGA for GBM 
+
+all.gbm <- list.files("GBM/", recursive = TRUE, pattern = "*.birdseed.data.txt$")
+
+setwd("GBM/") ## change directory for GBM samples
+
+## load sdrf file that contains the naming information for all GBM samples
+
+gbm.names <- read.delim("broad.mit.edu_GBM.Genome_Wide_SNP_6.sdrf.txt", header = TRUE)
+
+all.gbm.split <- colsplit(all.gbm, "/", c("folder_name", "sample_name")) ## split the file names to be compatible with the sdrf.txt file
+
+gbm.final.matched <- gbm.names[match(all.gbm.split$sample_name, gbm.names$Derived.Array.Data.Matrix.File.1), c(1,2,31)] ## match file names to sdrf 
+
+gbm.tcga.split.barcode <- colsplit(gbm.final.matched$Comment..TCGA.Barcode., "-", c("project", "TSS", "participant", "sample", "portion", "plate", "center"))
+
+## extract the list of germline blood only files using the TCGA code
+
+gbm.germline.blood <- gbm.final.matched[grep(10, gbm.tcga.split.barcode$sample), ]
+
+## load the clinical file from TCGA
+
+gbm.clin <- read.delim('nationwidechildrens.org_clinical_patient_gbm.txt', skip = 1)
+
+gbm.clin.to.use <- gbm.clin[-1, ] ## remove first row to use file for matching
+
+### extract only white non-hispanic samples
+
+gbm.samples.white <- gbm.clin.to.use[which(gbm.clin.to.use$race == "WHITE"), ] ## extract white only samples
+
+gbm.samples.final.pop <- gbm.samples.white[which(gbm.samples.white$ethnicity == "NOT HISPANIC OR LATINO"), ] ## remove Hispanic or Latino samples
+
+## split columns and filter blood germline list to exclude non-white or white hispanic samples
+
+gbm.germline.blood.split <- colsplit(gbm.germline.blood$Comment..TCGA.Barcode., "-10", c("patient_ID", "sample_info"))
+
+gbm.germline.blood$patient_ID <- gbm.germline.blood.split$patient_ID
+
+gbm.germline.blood.samples.white.only <- gbm.germline.blood[which(gbm.germline.blood$patient_ID %in% gbm.samples.final.pop$bcr_patient_barcode), ]
+ 
+write.table(gbm.germline.blood.samples.white.only, file = "/GBM/blood_normal_white_only_GBM.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+______________________________________________________________________________________________________________________________________________________________________________________________________
+
+## start new R session for working with LGG
+
+## load libraries
+
+library('reshape2')
+
+## load all samples from TCGA for LGG 
+
+all.lgg <- list.files("LGG/", recursive = TRUE, pattern = "*.birdseed.data.txt$")
+
+setwd("LGG/") ## change directory for GBM samples
+
+## load sdrf file that contains the naming information for all GBM samples
+
+lgg.names <- read.delim("broad.mit.edu_LGG.Genome_Wide_SNP_6.sdrf.txt", header = TRUE)
+
+all.lgg.split <- colsplit(all.lgg, "/", c("folder_name", "sample_name")) ## split the file names to be compatible with the sdrf.txt file
+
+lgg.final.matched <- lgg.names[match(all.lgg.split$sample_name, lgg.names$Derived.Array.Data.Matrix.File.1), c(1,2,31)] ## match file names to sdrf 
+
+lgg.tcga.split.barcode <- colsplit(lgg.final.matched$Comment..TCGA.Barcode., "-", c("project", "TSS", "participant", "sample", "portion", "plate", "center"))
+
+## extract the list of germline blood only files using the TCGA code
+
+lgg.germline.blood <- lgg.final.matched[grep(10, lgg.tcga.split.barcode$sample), ]
+
+## load the clinical file from TCGA
+
+lgg.clin <- read.delim('nationwidechildrens.org_clinical_patient_lgg.txt', skip = 1)
+
+lgg.clin.to.use <- lgg.clin[-1, ] ## remove first row to use file for matching
+
+### extract only white non-hispanic samples
+
+lgg.samples.white <- lgg.clin.to.use[which(lgg.clin.to.use$race == "WHITE"), ] ## extract white only samples
+
+lgg.samples.final.pop <- lgg.samples.white[which(lgg.samples.white$ethnicity == "NOT HISPANIC OR LATINO"), ] ## remove Hispanic or Latino samples
+
+## split columns and filter blood germline list to exclude non-white or white hispanic samples
+
+lgg.germline.blood.split <- colsplit(lgg.germline.blood$Comment..TCGA.Barcode., "-10", c("patient_ID", "sample_info"))
+
+lgg.germline.blood$patient_ID <- lgg.germline.blood.split$patient_ID
+
+lgg.germline.blood.samples.white.only <- lgg.germline.blood[which(lgg.germline.blood$patient_ID %in% lgg.samples.final.pop$bcr_patient_barcode), ]
+
+write.table(lgg.germline.blood.samples.white.only, file = "/LGG/blood_normal_white_only_LGG.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+______________________________________________________________________________________________________________________________________________________________________________________________________
+
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 2. Extract file names, copy files to keep backup, and format low-confidence calls
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### first, write individual shell code to extract the last column of germline blood names, and copy the correct files to new directories
+### read them from file with three columns, take those names and paste them in new directories
+
+### first have to extract just the third column from the genotype files
+
+## extract third column from each file to make a new file to use
+
+cut -f3 blood_normal_white_only_LUAD.tsv > blood_normal_white_only_for_copy_LUAD.tsv
+
+cut -f3 blood_normal_white_only_LUSC.tsv > blood_normal_white_only_for_copy_LUSC.tsv
+
+cut -f3 blood_normal_white_only_HNSC.tsv > blood_normal_white_only_for_copy_HNSC.tsv
+
+cut -f3 blood_normal_white_only_BLCA.tsv > blood_normal_white_only_for_copy_BLCA.tsv
+
+cut -f3 blood_normal_white_only_GBM.tsv > blood_normal_white_only_for_copy_GBM.tsv
+
+cut -f3 blood_normal_white_only_LGG.tsv > blood_normal_white_only_for_copy_LGG.tsv
+
+## create new directories for copied files to use 
+
+mkdir LUAD_TCGA_normal_blood_white_only
+mkdir LUSC_TCGA_normal_blood_white_only
+mkdir HNSC_TCGA_normal_blood_white_only
+mkdir BLCA_TCGA_normal_blood_white_only
+mkdir GBM_TCGA_normal_blood_white_only
+mkdir LGG_TCGA_normal_blood_white_only
+
+#### now, make scripts and run the scripts from the germline_genotypes directories generated above
+
+#################### LUAD ############################# 
+
+vi LUAD_blood_genotype_white_only_copy.sh ## make new file
+
+#!/bin/bash
+
+while read line
+do 
+	find LUAD -iname "$line" -exec cp '{}' LUAD_TCGA_normal_blood_white_only \; 
+done < LUAD/blood_normal_white_only_for_copy_LUAD.tsv
+
+chmod u+x LUAD_blood_genotype_white_only_copy.sh ## change permissions to run
+
+#################### LUSC ############################# 
+
+vi LUSC_blood_genotype_white_only_copy.sh
+
+#!/bin/bash
+
+while read line
+do 
+	find LUSC -iname "$line" -exec cp '{}' LUSC_TCGA_normal_blood_white_only \; 
+done < LUSC/blood_normal_white_only_for_copy_LUSC.tsv
+
+
+chmod u+x LUSC_blood_genotype_white_only_copy.sh ## change permissions to run
+
+#################### HNSC ############################# 
+
+vi HNSC_blood_genotype_white_only_copy.sh
+
+#!/bin/bash
+
+while read line
+do 
+	find HNSC -iname "$line" -exec cp '{}' HNSC_TCGA_normal_blood_white_only \; 
+done < HNSC/blood_normal_white_only_for_copy_HNSC.tsv
+
+chmod u+x HNSC_blood_genotype_white_only_copy.sh ## change permissions to run
+
+#################### BLCA ############################# 
+
+vi BLCA_blood_genotype_white_only_copy.sh
+
+#!/bin/bash
+
+while read line
+do 
+	find BLCA -iname "$line" -exec cp '{}' BLCA_TCGA_normal_blood_white_only \; 
+done < BLCA/blood_normal_white_only_for_copy_BLCA.tsv
+
+chmod u+x BLCA_blood_genotype_white_only_copy.sh
+
+#################### GBM ############################# 
+
+vi GBM_blood_genotype_white_only_copy.sh
+
+#!/bin/bash
+
+while read line
+do 
+	find GBM -iname "$line" -exec cp '{}' GBM_TCGA_normal_blood_white_only \; 
+done < GBM/blood_normal_white_only_for_copy_GBM.tsv
+
+chmod u+x GBM_blood_genotype_white_only_copy.sh
+
+#################### LGG ############################# 
+
+vi LGG_blood_genotype_white_only_copy.sh
+
+#!/bin/bash
+
+while read line
+do 
+	find LGG -iname "$line" -exec cp '{}' LGG_TCGA_normal_blood_white_only \; 
+done < LGG/blood_normal_white_only_for_copy_LGG.tsv
+
+chmod u+x LGG_blood_genotype_white_only_copy.sh
+
+#########################################################################################################
+### birdseed non-confident calls have score > 0.1, so need to remove these calls
+### Take each of those files and replace genotype with -9 if confidence score is > 0.1
+#########################################################################################################
+
+## Replace all values with low confidence calls (> 0.1) to -9 in all files
+
+for f in LUAD_TCGA_normal_blood_white_only/*.birdseed.data.txt
+	do sed 's/ //g' $f | awk '{if ($3>0.1){$2=-9}}{print $0}' | sed 's/ /\t/g' > $f.-9_conversion_white_only.txt
+done
+
+
+
+for f in LUSC_TCGA_normal_blood_white_only/*.birdseed.data.txt
+	do sed 's/ //g' $f | awk '{if ($3>0.1){$2=-9}}{print $0}' | sed 's/ /\t/g' > $f.-9_conversion_white_only.txt
+done
+
+
+
+for f in HNSC_TCGA_normal_blood_white_only/*.birdseed.data.txt
+	do sed 's/ //g' $f | awk '{if ($3>0.1){$2=-9}}{print $0}' | sed 's/ /\t/g' > $f.-9_conversion_white_only.txt
+done
+
+
+
+for f in BLCA_TCGA_normal_blood_white_only/*.birdseed.data.txt
+	do sed 's/ //g' $f | awk '{if ($3>0.1){$2=-9}}{print $0}' | sed 's/ /\t/g' > $f.-9_conversion_white_only.txt
+done
+
+
+
+for f in GBM_TCGA_normal_blood_white_only/*.birdseed.data.txt
+	do sed 's/ //g' $f | awk '{if ($3>0.1){$2=-9}}{print $0}' | sed 's/ /\t/g' > $f.-9_conversion_white_only.txt
+done
+
+
+
+for f in LGG_TCGA_normal_blood_white_only/*.birdseed.data.txt
+	do sed 's/ //g' $f | awk '{if ($3>0.1){$2=-9}}{print $0}' | sed 's/ /\t/g' > $f.-9_conversion_white_only.txt
+done
+
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 3. Combine all of the genotype calls together per cancer type
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+
+############ now need to combine all of these files together only keeping the genotype data
+
+### code below will be used for separate shell scripts that are executed on the linux command line
+
+
+######################################################## LUAD ########################################################
+
+vi combine_reformatted_tcga_blood_genotype_white_only_LUAD.sh
+
+#!/bin/bash
+
+tmp=$(mktemp) 
+tmp2=$(mktemp) 
+tmp3=$(mktemp) ## make temp directories to hold results
+
+echo $tmp;
+
+for file in LUAD_TCGA_normal_blood_white_only/*.-9_conversion_white_only.txt
+do
+        if [ -s "$tmp" ]
+        then
+                cut -f 1,2 "$file" > "$tmp3"
+                join "$tmp" "$tmp3" > "$tmp2"
+        else
+                cut -f 1,2 "$file" > "$tmp3"
+                cp "$tmp3" "$tmp2"
+        fi
+        cp "$tmp2" "$tmp"
+done
+
+chmod u+x combine_reformatted_tcga_blood_genotype_white_only_LUAD.sh
+
+./combine_reformatted_tcga_blood_genotype_white_only_LUAD.sh ## run the script 
+/tmp/tmp.60ypaUcH1Q ## note the tmp location 
+
+## when finished running script copy tmp files to new location
+
+cp -i /tmp/tmp.60ypaUcH1Q /reformatted_files/LUAD_combined_reformatted_genotype_files_white_only.txt
+
+######################################################## LUSC ########################################################
+
+vi combine_reformatted_tcga_blood_genotype_white_only_LUSC.sh
+
+#!/bin/bash
+
+tmp=$(mktemp) 
+tmp2=$(mktemp) 
+tmp3=$(mktemp) ## make temp directories to hold results
+
+echo $tmp;
+
+for file in LUSC_TCGA_normal_blood_white_only/*.-9_conversion_white_only.txt
+do
+        if [ -s "$tmp" ]
+        then
+                cut -f 1,2 "$file" > "$tmp3"
+                join "$tmp" "$tmp3" > "$tmp2"
+        else
+                cut -f 1,2 "$file" > "$tmp3"
+                cp "$tmp3" "$tmp2"
+        fi
+        cp "$tmp2" "$tmp"
+done
+
+chmod u+x combine_reformatted_tcga_blood_genotype_white_only_LUSC.sh
+
+./combine_reformatted_tcga_blood_genotype_white_only_LUSC.sh ## run the script 
+/tmp/tmp.D9raYSwbz7 ## note the tmp location 
+
+## when finished running script copy tmp files to new location
+
+cp -i /tmp/tmp.D9raYSwbz7 /reformatted_files/LUSC_combined_reformatted_genotype_files_white_only.txt
+
+######################################################## HNSC ########################################################
+
+vi combine_reformatted_tcga_blood_genotype_white_only_HNSC.sh
+
+#!/bin/bash
+
+tmp=$(mktemp) 
+tmp2=$(mktemp) 
+tmp3=$(mktemp) ## make temp directories to hold results
+
+echo $tmp;
+
+for file in HNSC_TCGA_normal_blood_white_only/*.-9_conversion_white_only.txt
+do
+        if [ -s "$tmp" ]
+        then
+                cut -f 1,2 "$file" > "$tmp3"
+                join "$tmp" "$tmp3" > "$tmp2"
+        else
+                cut -f 1,2 "$file" > "$tmp3"
+                cp "$tmp3" "$tmp2"
+        fi
+        cp "$tmp2" "$tmp"
+done
+
+chmod u+x combine_reformatted_tcga_blood_genotype_white_only_HNSC.sh
+
+./combine_reformatted_tcga_blood_genotype_white_only_HNSC.sh ## run the script 
+/tmp/tmp.WPM03Qv36Q ## note the tmp location 
+
+## when finished running script copy tmp files to new location
+
+cp -i /tmp/tmp.WPM03Qv36Q /reformatted_files/HNSC_combined_reformatted_genotype_files_white_only.txt
+
+######################################################## BLCA ########################################################
+
+vi combine_reformatted_tcga_blood_genotype_white_only_BLCA.sh
+
+#!/bin/bash
+
+tmp=$(mktemp) 
+tmp2=$(mktemp) 
+tmp3=$(mktemp) ## make temp directories to hold results
+
+echo $tmp;
+
+for file in BLCA_TCGA_normal_blood_white_only/*.-9_conversion_white_only.txt
+do
+        if [ -s "$tmp" ]
+        then
+                cut -f 1,2 "$file" > "$tmp3"
+                join "$tmp" "$tmp3" > "$tmp2"
+        else
+                cut -f 1,2 "$file" > "$tmp3"
+                cp "$tmp3" "$tmp2"
+        fi
+        cp "$tmp2" "$tmp"
+done
+
+chmod u+x combine_reformatted_tcga_blood_genotype_white_only_BLCA.sh
+
+./combine_reformatted_tcga_blood_genotype_white_only_BLCA.sh ## run the script 
+/tmp/tmp.fPreKxKsGF ## note the tmp location 
+
+## when finished running script copy tmp files to new location
+
+cp -i /tmp/tmp.fPreKxKsGF /reformatted_files/BLCA_combined_reformatted_genotype_files_white_only.txt
+
+######################################################## GBM ########################################################
+
+vi combine_reformatted_tcga_blood_genotype_white_only_GBM.sh
+
+#!/bin/bash
+
+tmp=$(mktemp) 
+tmp2=$(mktemp) 
+tmp3=$(mktemp) ## make temp directories to hold results
+
+echo $tmp;
+
+for file in GBM_TCGA_normal_blood_white_only/*.-9_conversion_white_only.txt
+do
+        if [ -s "$tmp" ]
+        then
+                cut -f 1,2 "$file" > "$tmp3"
+                join "$tmp" "$tmp3" > "$tmp2"
+        else
+                cut -f 1,2 "$file" > "$tmp3"
+                cp "$tmp3" "$tmp2"
+        fi
+        cp "$tmp2" "$tmp"
+done
+
+chmod u+x combine_reformatted_tcga_blood_genotype_white_only_GBM.sh
+
+./combine_reformatted_tcga_blood_genotype_white_only_GBM.sh ## run the script 
+/tmp/tmp.9fkiRWhmni ## note the tmp location 
+
+## when finished running script copy tmp files to new location
+
+cp -i /tmp/tmp.9fkiRWhmni /reformatted_files/GBM_combined_reformatted_genotype_files_white_only.txt
+
+######################################################## LGG ########################################################
+
+vi combine_reformatted_tcga_blood_genotype_white_only_LGG.sh
+
+#!/bin/bash
+
+tmp=$(mktemp) 
+tmp2=$(mktemp) 
+tmp3=$(mktemp) ## make temp directories to hold results
+
+echo $tmp;
+
+for file in LGG_TCGA_normal_blood_white_only/*.-9_conversion_white_only.txt
+do
+        if [ -s "$tmp" ]
+        then
+                cut -f 1,2 "$file" > "$tmp3"
+                join "$tmp" "$tmp3" > "$tmp2"
+        else
+                cut -f 1,2 "$file" > "$tmp3"
+                cp "$tmp3" "$tmp2"
+        fi
+        cp "$tmp2" "$tmp"
+done
+
+chmod u+x combine_reformatted_tcga_blood_genotype_white_only_LGG.sh
+
+./combine_reformatted_tcga_blood_genotype_white_only_LGG.sh ## run the script 
+/tmp/tmp.xNE03ajAQI ## note the tmp location 
+
+## when finished running script copy tmp files to new location
+
+cp -i /tmp/tmp.xNE03ajAQI /reformatted_files/LGG_combined_reformatted_genotype_files_white_only.txt
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 4. Use R to convert these combined genotype files to PLINK allele coded format of A,C,G,T and 0 0 for missing calls
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+
+######################################################## LUAD ########################################################
+
+### start new R session 
+
+## read in combined genotypes file
+
+luad.combined <- read.table("/reformatted_files/LUAD_combined_reformatted_genotype_files_white_only.txt")
+
+## need to remove top two header lines of the combined file
+
+luad.combined.2 <- luad.combined[-c(1,2), ] 
+
+### load the affy file downloaded from http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping and skip all the heading information
+
+affymap <- read.csv("GenomeWideSNP_6.na35.annot.csv", header = TRUE, skip = 18)
+
+## merge together some of the attributes from mapping file with the TCGA data
+
+luad.combined.merge <- merge(affymap[, c(1:5)], luad.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1")) ## this merges the files to only keep the first 5 columns from affymapping file
+
+luad.map.file.for.plink <- luad.combined.merge[ ,c(3,2,4)] ## this makes the initial map file for plink
+
+luad.sample.names <- as.data.frame(paste("LUAD_sample", seq(1:ncol(luad.combined.2[ ,-1])), sep = "")) ## this is needed for ped file of sample names.
+
+## need to remove probe IDs without SNP positions and make the new map and genotype files
+
+positions.to.remove <- which(luad.map.file.for.plink$Physical.Position == "---")
+
+luad.map.new.to.use <- luad.map.file.for.plink[-positions.to.remove, ]
+
+## now make genotype ped file   
+
+### first make new merged file with the alleles 
+
+luad.combined.merge.2 <- merge(affymap[, c(1:5,9,10)], luad.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1"))
+
+### remove bad probes without SNP positions
+
+luad.combined.merge.3 <- luad.combined.merge.2[-positions.to.remove, ]
+
+## now recode the 0,1,2 alleles to the actual bases for PLINK
+
+## first remove luad.combined.merge.2. so no mistakes
+
+rm(luad.combined.merge.2)
+
+## now, run the conversion
+
+luad.ped <- ifelse(luad.combined.merge.3 == 0, paste(luad.combined.merge.3$Allele.A, luad.combined.merge.3$Allele.A, sep = " "), ifelse(luad.combined.merge.3 == 1, paste(luad.combined.merge.3$Allele.A, luad.combined.merge.3$Allele.B, sep = " "), ifelse(luad.combined.merge.3 == 2, paste(luad.combined.merge.3$Allele.B, luad.combined.merge.3$Allele.B, sep = " "), paste("0","0", sep = " "))))
+
+luad.ped.for.plink <- luad.ped[ ,-c(1:7)] ### removes the non sample stuff from the ped file
+
+luad.ped.for.plink.t <- t(luad.ped.for.plink) ### transposes file to be used for PLINK
+
+## write new files for PLINK
+
+write.table(luad.ped.for.plink.t, file = "LUAD_white_only_genotype_file_for_plink.ped", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(luad.map.new.to.use, file = "LUAD_white_only_genotype_file_for_plink.map", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(luad.sample.names, file = "LUAD_sample_names_white_only.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+######################################################## LUSC ########################################################
+
+### start new R session 
+
+## read in combined genotypes file
+
+lusc.combined <- read.table("/reformatted_files/LUSC_combined_reformatted_genotype_files_white_only.txt") 
+
+## need to remove top two header lines of the combined file
+
+lusc.combined.2 <- lusc.combined[-c(1,2), ]
+
+### load the affy file downloaded from http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping and skip all the heading information
+
+affymap <- read.csv("GenomeWideSNP_6.na35.annot.csv", header = TRUE, skip = 18)
+
+## merge together some of the attributes from mapping file with the TCGA data
+
+lusc.combined.merge <- merge(affymap[, c(1:5)], lusc.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1")) ## this merges the files to only keep the first 5 columns from affymapping file
+
+lusc.map.file.for.plink <- lusc.combined.merge[ ,c(3,2,4)] ## this makes the initial map file for plink
+
+lusc.sample.names <- as.data.frame(paste("LUSC_sample", seq(1:ncol(lusc.combined.2[ ,-1])), sep = "")) ## this is needed for ped file of sample names.
+
+## need to remove probe IDs without SNP positions and make the new map and genotype files
+
+positions.to.remove <- which(lusc.map.file.for.plink$Physical.Position == "---")
+
+lusc.map.new.to.use <- lusc.map.file.for.plink[-positions.to.remove, ]
+
+## now make genotype ped file   
+
+### first make new merged file with the alleles 
+
+lusc.combined.merge.2 <- merge(affymap[, c(1:5,9,10)], lusc.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1"))
+
+### remove bad probes without SNP positions
+
+lusc.combined.merge.3 <- lusc.combined.merge.2[-positions.to.remove, ]
+
+## now recode the 0,1,2 alleles to the actual bases for PLINK
+
+## first remove lusc.combined.merge.2. so no mistakes
+
+rm(lusc.combined.merge.2)
+
+## now, run the conversion
+
+lusc.ped <- ifelse(lusc.combined.merge.3 == 0, paste(lusc.combined.merge.3$Allele.A, lusc.combined.merge.3$Allele.A, sep = " "), ifelse(lusc.combined.merge.3 == 1, paste(lusc.combined.merge.3$Allele.A, lusc.combined.merge.3$Allele.B, sep = " "), ifelse(lusc.combined.merge.3 == 2, paste(lusc.combined.merge.3$Allele.B, lusc.combined.merge.3$Allele.B, sep = " "), paste("0","0", sep = " "))))
+
+lusc.ped.for.plink <- lusc.ped[ ,-c(1:7)] ### removes the non sample stuff from the ped file
+
+lusc.ped.for.plink.t <- t(lusc.ped.for.plink) ### transposes file to be used for PLINK
+
+## write new files for PLINK
+
+write.table(lusc.ped.for.plink.t, file = "LUSC_white_only_genotype_file_for_plink.ped", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(lusc.map.new.to.use, file = "LUSC_white_only_genotype_file_for_plink.map", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(lusc.sample.names, file = "LUSC_sample_names_white_only.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+######################################################## HNSC ########################################################
+
+### start new R session 
+
+## read in combined genotypes file
+
+hnsc.combined <- read.table("/reformatted_files/HNSC_combined_reformatted_genotype_files_white_only.txt") 
+
+## need to remove top two header lines of the combined file
+
+hnsc.combined.2 <- hnsc.combined[-c(1,2), ]
+
+### load the affy file downloaded from http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping and skip all the heading information
+
+affymap <- read.csv("GenomeWideSNP_6.na35.annot.csv", header = TRUE, skip = 18)
+
+## merge together some of the attributes from mapping file with the TCGA data
+
+hnsc.combined.merge <- merge(affymap[, c(1:5)], hnsc.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1")) ## this merges the files to only keep the first 5 columns from affymapping file
+
+hnsc.map.file.for.plink <- hnsc.combined.merge[ ,c(3,2,4)] ## this makes the initial map file for plink
+
+hnsc.sample.names <- as.data.frame(paste("HNSC_sample", seq(1:ncol(hnsc.combined.2[ ,-1])), sep = "")) ## this is needed for ped file of sample names.
+
+## need to remove probe IDs without SNP positions and make the new map and genotype files
+
+positions.to.remove <- which(hnsc.map.file.for.plink$Physical.Position == "---")
+
+hnsc.map.new.to.use <- hnsc.map.file.for.plink[-positions.to.remove, ]
+
+## now make genotype ped file   
+
+### first make new merged file with the alleles 
+
+hnsc.combined.merge.2 <- merge(affymap[, c(1:5,9,10)], hnsc.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1"))
+
+### remove bad probes without SNP positions
+
+hnsc.combined.merge.3 <- hnsc.combined.merge.2[-positions.to.remove, ]
+
+## now recode the 0,1,2 alleles to the actual bases for PLINK
+
+## first remove hnsc.combined.merge.2. so no mistakes
+
+rm(hnsc.combined.merge.2)
+
+## now, run the conversion
+
+hnsc.ped <- ifelse(hnsc.combined.merge.3 == 0, paste(hnsc.combined.merge.3$Allele.A, hnsc.combined.merge.3$Allele.A, sep = " "), ifelse(hnsc.combined.merge.3 == 1, paste(hnsc.combined.merge.3$Allele.A, hnsc.combined.merge.3$Allele.B, sep = " "), ifelse(hnsc.combined.merge.3 == 2, paste(hnsc.combined.merge.3$Allele.B, hnsc.combined.merge.3$Allele.B, sep = " "), paste("0","0", sep = " "))))
+
+hnsc.ped.for.plink <- hnsc.ped[ ,-c(1:7)] ### removes the non sample stuff from the ped file
+
+hnsc.ped.for.plink.t <- t(hnsc.ped.for.plink) ### transposes file to be used for PLINK
+
+## write new files for PLINK
+
+write.table(hnsc.ped.for.plink.t, file = "HNSC_white_only_genotype_file_for_plink.ped", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(hnsc.map.new.to.use, file = "HNSC_white_only_genotype_file_for_plink.map", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(hnsc.sample.names, file = "HNSC_sample_names_white_only.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+######################################################## BLCA ########################################################
+
+### start new R session 
+
+## read in combined genotypes file
+
+blca.combined <- read.table("/reformatted_files/BLCA_combined_reformatted_genotype_files_white_only.txt")
+
+## need to remove top two header lines of the combined file
+
+blca.combined.2 <- blca.combined[-c(1,2), ]
+
+### load the affy file downloaded from http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping and skip all the heading information
+
+affymap <- read.csv("GenomeWideSNP_6.na35.annot.csv", header = TRUE, skip = 18)
+
+## merge together some of the attributes from mapping file with the TCGA results
+
+blca.combined.merge <- merge(affymap[, c(1:5)], blca.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1")) ## this merges the files to only keep the first 5 columns from affymapping file
+
+blca.map.file.for.plink <- blca.combined.merge[ ,c(3,2,4)] ## this makes the initial map file for plink
+
+blca.sample.names <- as.data.frame(paste("BLCA_sample", seq(1:ncol(blca.combined.2[ ,-1])), sep = "")) ## this is needed for ped file of sample names.
+
+## need to remove probe IDs without SNP positions and make the new map and genotype files
+
+positions.to.remove <- which(blca.map.file.for.plink$Physical.Position == "---")
+
+blca.map.new.to.use <- blca.map.file.for.plink[-positions.to.remove, ]
+
+## now make genotype ped file   
+
+### first make new merged file with the alleles 
+
+blca.combined.merge.2 <- merge(affymap[, c(1:5,9,10)], blca.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1"))
+
+### remove bad probes without SNP positions
+
+blca.combined.merge.3 <- blca.combined.merge.2[-positions.to.remove, ]
+
+## now recode the 0,1,2 alleles to the actual bases for PLINK
+
+## first remove blca.combined.merge.2. so no mistakes
+
+rm(blca.combined.merge.2)
+
+## now, run the conversion
+
+blca.ped <- ifelse(blca.combined.merge.3 == 0, paste(blca.combined.merge.3$Allele.A, blca.combined.merge.3$Allele.A, sep = " "), ifelse(blca.combined.merge.3 == 1, paste(blca.combined.merge.3$Allele.A, blca.combined.merge.3$Allele.B, sep = " "), ifelse(blca.combined.merge.3 == 2, paste(blca.combined.merge.3$Allele.B, blca.combined.merge.3$Allele.B, sep = " "), paste("0","0", sep = " "))))
+
+blca.ped.for.plink <- blca.ped[ ,-c(1:7)] ### removes the non sample stuff from the ped file
+
+blca.ped.for.plink.t <- t(blca.ped.for.plink) ### transposes file to be used for PLINK
+
+## write new files for PLINK
+
+write.table(blca.ped.for.plink.t, file = "BLCA_white_only_genotype_file_for_plink.ped", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(blca.map.new.to.use, file = "BLCA_white_only_genotype_file_for_plink.map", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(blca.sample.names, file = "BLCA_sample_names_white_only.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+######################################################## GBM ########################################################
+
+### start new R session 
+
+## read in combined genotypes file
+
+gbm.combined <- read.table("/reformatted_files/GBM_combined_reformatted_genotype_files_white_only.txt")
+
+## need to remove top two header lines of the combined file
+
+gbm.combined.2 <- gbm.combined[-c(1,2), ]
+
+### load the affy file downloaded from http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping and skip all the heading information
+
+affymap <- read.csv("GenomeWideSNP_6.na35.annot.csv", header = TRUE, skip = 18)
+
+## merge together some of the attributes from mapping file with the TCGA results
+
+gbm.combined.merge <- merge(affymap[, c(1:5)], gbm.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1")) ## this merges the files to only keep the first 5 columns from affymapping file
+
+gbm.map.file.for.plink <- gbm.combined.merge[ ,c(3,2,4)] ## this makes the initial map file for plink
+
+gbm.sample.names <- as.data.frame(paste("GBM_sample", seq(1:ncol(gbm.combined.2[ ,-1])), sep = "")) ## this is needed for ped file of sample names.
+
+## need to remove probe IDs without SNP positions and make the new map and genotype files
+
+positions.to.remove <- which(gbm.map.file.for.plink$Physical.Position == "---")
+
+gbm.map.new.to.use <- gbm.map.file.for.plink[-positions.to.remove, ]
+
+## now make genotype ped file   
+
+### first make new merged file with the alleles 
+
+gbm.combined.merge.2 <- merge(affymap[, c(1:5,9,10)], gbm.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1"))
+
+### remove bad probes without SNP positions
+
+gbm.combined.merge.3 <- gbm.combined.merge.2[-positions.to.remove, ]
+
+## now recode the 0,1,2 alleles to the actual bases for PLINK
+
+## first remove gbm.combined.merge.2. so no mistakes
+
+rm(gbm.combined.merge.2)
+
+## now, run the conversion
+
+gbm.ped <- ifelse(gbm.combined.merge.3 == 0, paste(gbm.combined.merge.3$Allele.A, gbm.combined.merge.3$Allele.A, sep = " "), ifelse(gbm.combined.merge.3 == 1, paste(gbm.combined.merge.3$Allele.A, gbm.combined.merge.3$Allele.B, sep = " "), ifelse(gbm.combined.merge.3 == 2, paste(gbm.combined.merge.3$Allele.B, gbm.combined.merge.3$Allele.B, sep = " "), paste("0","0", sep = " "))))
+
+gbm.ped.for.plink <- gbm.ped[ ,-c(1:7)] ### removes the non sample stuff from the ped file
+
+gbm.ped.for.plink.t <- t(gbm.ped.for.plink) ### transposes file to be used for PLINK
+
+## write new files for PLINK
+
+write.table(gbm.ped.for.plink.t, file = "GBM_white_only_genotype_file_for_plink.ped", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(gbm.map.new.to.use, file = "GBM_white_only_genotype_file_for_plink.map", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(gbm.sample.names, file = "GBM_sample_names_white_only.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+######################################################## LGG ########################################################
+
+### start new R session 
+
+## read in combined genotypes file
+
+lgg.combined <- read.table("/reformatted_files/LGG_combined_reformatted_genotype_files_white_only.txt")
+
+## need to remove top two header lines of the combined file
+
+lgg.combined.2 <- lgg.combined[-c(1,2), ]
+
+### load the affy file downloaded from http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping and skip all the heading information
+
+affymap <- read.csv("GenomeWideSNP_6.na35.annot.csv", header = TRUE, skip = 18)
+
+## merge together some of the attributes from mapping file with the TCGA results
+
+lgg.combined.merge <- merge(affymap[, c(1:5)], lgg.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1")) ## this merges the files to only keep the first 5 columns from affymapping file
+
+lgg.map.file.for.plink <- lgg.combined.merge[ ,c(3,2,4)] ## this makes the initial map file for plink
+
+lgg.sample.names <- as.data.frame(paste("LGG_sample", seq(1:ncol(lgg.combined.2[ ,-1])), sep = "")) ## this is needed for ped file of sample names.
+
+## need to remove probe IDs without SNP positions and make the new map and genotype files
+
+positions.to.remove <- which(lgg.map.file.for.plink$Physical.Position == "---")
+
+lgg.map.new.to.use <- lgg.map.file.for.plink[-positions.to.remove, ]
+
+## now make genotype ped file   
+
+### first make new merged file with the alleles 
+
+lgg.combined.merge.2 <- merge(affymap[, c(1:5,9,10)], lgg.combined.2, by.x=c("Probe.Set.ID"), by.y=c("V1"))
+
+### remove bad probes without SNP positions
+
+lgg.combined.merge.3 <- lgg.combined.merge.2[-positions.to.remove, ]
+
+## now recode the 0,1,2 alleles to the actual bases for PLINK
+
+## first remove lgg.combined.merge.2. so no mistakes
+
+rm(lgg.combined.merge.2)
+
+## now, run the conversion
+
+lgg.ped <- ifelse(lgg.combined.merge.3 == 0, paste(lgg.combined.merge.3$Allele.A, lgg.combined.merge.3$Allele.A, sep = " "), ifelse(lgg.combined.merge.3 == 1, paste(lgg.combined.merge.3$Allele.A, lgg.combined.merge.3$Allele.B, sep = " "), ifelse(lgg.combined.merge.3 == 2, paste(lgg.combined.merge.3$Allele.B, lgg.combined.merge.3$Allele.B, sep = " "), paste("0","0", sep = " "))))
+
+lgg.ped.for.plink <- lgg.ped[ ,-c(1:7)] ### removes the non sample stuff from the ped file
+
+lgg.ped.for.plink.t <- t(lgg.ped.for.plink) ### transposes file to be used for PLINK
+
+## write new files for PLINK
+
+write.table(lgg.ped.for.plink.t, file = "LGG_white_only_genotype_file_for_plink.ped", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(lgg.map.new.to.use, file = "LGG_white_only_genotype_file_for_plink.map", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+write.table(lgg.sample.names, file = "LGG_sample_names_white_only.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### Section 5. Combine the newly coded genotype files together using PLINK and run the PCA
+
+################################################################################################################################################################################################
+################################################################################################################################################################################################
+
+### First, paste the sample names to the ped files and change map name to match. 
+
+paste -d" " LUAD_sample_names_white_only.txt LUAD_white_only_genotype_file_for_plink.ped > LUAD_white_only_genotype_file_for_plink_with_sample_names.ped
+
+cp LUAD_white_only_genotype_file_for_plink.map LUAD_white_only_genotype_file_for_plink_with_sample_names.map ## make new map file with identical new ped file name
+
+
+paste -d" " LUSC_sample_names_white_only.txt LUSC_white_only_genotype_file_for_plink.ped > LUSC_white_only_genotype_file_for_plink_with_sample_names.ped
+
+cp LUSC_white_only_genotype_file_for_plink.map LUSC_white_only_genotype_file_for_plink_with_sample_names.map ## make new map file with identical new ped file name
+
+
+paste -d" " HNSC_sample_names_white_only.txt HNSC_white_only_genotype_file_for_plink.ped > HNSC_white_only_genotype_file_for_plink_with_sample_names.ped
+
+cp HNSC_white_only_genotype_file_for_plink.map HNSC_white_only_genotype_file_for_plink_with_sample_names.map ## make new map file with identical new ped file name
+
+
+paste -d" " BLCA_sample_names_white_only.txt BLCA_white_only_genotype_file_for_plink.ped > BLCA_white_only_genotype_file_for_plink_with_sample_names.ped
+
+cp BLCA_white_only_genotype_file_for_plink.map BLCA_white_only_genotype_file_for_plink_with_sample_names.map ## make new map file with identical new ped file name
+
+
+paste -d" " GBM_sample_names_white_only.txt GBM_white_only_genotype_file_for_plink.ped > GBM_white_only_genotype_file_for_plink_with_sample_names.ped
+
+cp GBM_white_only_genotype_file_for_plink.map GBM_white_only_genotype_file_for_plink_with_sample_names.map ## make new map file with identical new ped file name
+
+
+paste -d" " LGG_sample_names_white_only.txt LGG_white_only_genotype_file_for_plink.ped > LGG_white_only_genotype_file_for_plink_with_sample_names.ped
+
+cp LGG_white_only_genotype_file_for_plink.map LGG_white_only_genotype_file_for_plink_with_sample_names.map ## make new map file with identical new ped file name
+
+######## now, make bfiles from the map and ped files using PLINK
+
+./plink --file LUAD_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --make-bed --out LUAD_white_only_genotype_file_for_plink_with_sample_names
+
+./plink --file LUSC_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --make-bed --out LUSC_white_only_genotype_file_for_plink_with_sample_names
+
+./plink --file HNSC_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --make-bed --out HNSC_white_only_genotype_file_for_plink_with_sample_names
+
+./plink --file BLCA_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --make-bed --out BLCA_white_only_genotype_file_for_plink_with_sample_names
+
+./plink --file GBM_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --make-bed --out GBM_white_only_genotype_file_for_plink_with_sample_names
+
+./plink --file LGG_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --make-bed --out LGG_white_only_genotype_file_for_plink_with_sample_names
+
+### now, use mergelist function in PLINK to merge the bfiles together
+
+### first, need to combine all file names together into new file
+
+vi tcga_genotype_files_white_only_for_merging_in_plink.txt
+
+LUAD_white_only_genotype_file_for_plink_with_sample_names
+LUSC_white_only_genotype_file_for_plink_with_sample_names
+HNSC_white_only_genotype_file_for_plink_with_sample_names
+BLCA_white_only_genotype_file_for_plink_with_sample_names
+GBM_white_only_genotype_file_for_plink_with_sample_names
+LGG_white_only_genotype_file_for_plink_with_sample_names
+
+### run mergelist
+
+./plink --merge-list tcga_genotype_files_white_only_for_merging_in_plink.txt --make-bed --out all_tcga_genotypes_merged_white_only
+
+### above command produced a missnp file due to one trialleclic SNP. Use this missnp file with original bed files to remove triallelic SNP
+### then need to generate new merged genotype file
+
+### make new bed files using missnp
+
+./plink --file LUAD_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --exclude all_tcga_genotypes_merged_white_only-merge.missnp --make-bed --out LUAD_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+
+./plink --file LUSC_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --exclude all_tcga_genotypes_merged_white_only-merge.missnp --make-bed --out LUSC_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+
+./plink --file HNSC_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --exclude all_tcga_genotypes_merged_white_only-merge.missnp --make-bed --out HNSC_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+
+./plink --file BLCA_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --exclude all_tcga_genotypes_merged_white_only-merge.missnp --make-bed --out BLCA_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+
+./plink --file GBM_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --exclude all_tcga_genotypes_merged_white_only-merge.missnp --make-bed --out GBM_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+
+./plink --file LGG_white_only_genotype_file_for_plink_with_sample_names --no-fid --no-parents --no-sex --no-pheno --exclude all_tcga_genotypes_merged_white_only-merge.missnp --make-bed --out LGG_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+############### now, make new final mergelist
+
+vi tcga_genotype_files_white_only_for_merging_in_plink_tri_allelic_removed.txt
+
+LUAD_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+LUSC_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+HNSC_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_remove
+BLCA_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+GBM_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+LGG_white_only_genotype_file_for_plink_with_sample_names_tri_allelic_removed
+
+### now run new final merge command 
+
+./plink --merge-list tcga_genotype_files_white_only_for_merging_in_plink_tri_allelic_removed.txt --make-bed --out all_tcga_genotypes_merged_white_only_tri_allelic_removed
+
+
+### first need to trim the SNPs by LD before PCA. Use r2 value of 0.5 
+
+### first, need to make a set of SNPs for the LD trim. Need to get this from the merged file.
+
+### use PLINK's write-snplist command to get the list of SNPs needed for LD pruning
+
+./plink -bfile all_tcga_genotypes_merged_white_only_tri_allelic_removed --write-snplist --out all_tcga_genotypes_merged_white_only_tri_allelic_removed_for_ld_trim
+
+## now, run the LD trim on these SNPs using PLINK formatted 1000 Genomes EUROPEAN file from https://vegas2.qimrberghofer.edu.au/g1000p3_EUR.tar.gz
+
+./plink -bfile g1000p3_EUR --indep-pairwise 1000 kb 1 0.5 --extract all_tcga_genotypes_merged_white_only_tri_allelic_removed_for_ld_trim.snplist --out all_tcga_genotypes_merged_white_only_tri_allelic_removed_ld_snps_pruned
+
+### run PCA using the prune.in SNPs
+
+./plink -bfile all_tcga_genotypes_merged_white_only_tri_allelic_removed --extract all_tcga_genotypes_merged_white_only_tri_allelic_removed_ld_snps_pruned.prune.in --pca --out pca_all_tcga_genotypes_merged_no_tri_using_ld_pruned_snps
+
+### group of GBM outliers in the plot. Remove these samples and run new PCA
+### filename of samples is gbm_samples_to_exculde_pca.txt
+
+./plink -bfile all_tcga_genotypes_merged_white_only_tri_allelic_removed --remove gbm_samples_to_exculde_pca.txt --extract all_tcga_genotypes_merged_white_only_tri_allelic_removed_ld_snps_pruned.prune.in --pca --out pca_all_tcga_genotypes_merged_no_tri_using_ld_pruned_snps_gbm_outliers_exculded
+
+### Still outliers in the plot. Remove these samples and run new PCA
+
+### filename of all outlier samples is all_samples_to_exclude_final_pca
+
+### run the final PCA
+
+./plink -bfile all_tcga_genotypes_merged_white_only_tri_allelic_removed --remove all_samples_to_exclude_final_pca --extract all_tcga_genotypes_merged_white_only_tri_allelic_removed_ld_snps_pruned.prune.in --pca --out pca_all_tcga_genotypes_merged_no_tri_using_ld_pruned_snps_all_outliers_exculded
+
